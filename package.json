@@ -1,0 +1,11 @@
+{
+  "name": "layer-land",
+  "version": "0.0.0",
+  "private": false,
+  "scripts": {
+    "start": "node layerLand.js"
+  },
+  "dependencies": {
+    "ostracod-multiplayer": "github:ostracod/ostracod-multiplayer"
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "pageModules": [
+        {
+            "name": "stats",
+            "buttonLabel": "Stats",
+            "title": "Statistics",
+            "viewFile": "statsModule.html",
+            "shouldShowOnLoad": true
+        }
+    ],
+    "instructionsViewFile": "instructions.html",
+    "scripts": ["javascript/game.js"],
+    "stylesheets": ["stylesheets/game.css"],
+    "canvasWidth": 1000,
+    "canvasHeight": 500,
+    "framesPerSecond": 25,
+    "maximumPlayerCount": 15
+}
+
+
