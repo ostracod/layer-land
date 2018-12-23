@@ -1,4 +1,6 @@
 
+var tileUtils = require("./tileUtils");
+
 function GameDelegate() {
     
 }
