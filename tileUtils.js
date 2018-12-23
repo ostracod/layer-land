@@ -1,5 +1,5 @@
 
-var Pos = require("./pos");
+var Pos = require("./pos").Pos;
 
 var fs = require("fs");
 var pathUtils = require("path");
@@ -24,23 +24,9 @@ if (!fs.existsSync(clusterDirectory)) {
     fs.mkdirSync(clusterDirectory);
 }
 
-function roundPosToChunk(pos) {
-    return new Pos(
-        Math.floor(pos.x / chunkSize) * chunkSize,
-        Math.floor(pos.y / chunkSize) * chunkSize
-    );
-}
-
-function roundPosToCluster(pos) {
-    return new Pos(
-        Math.floor(pos.x / clusterSize) * clusterSize,
-        Math.floor(pos.y / clusterSize) * clusterSize
-    );
-}
-
 function Chunk(pos) {
-    this.pos = roundPosToChunk(pos);
-    this.clusterPos = roundPosToCluster(this.pos);
+    this.pos = tileUtils.roundPosToChunk(pos);
+    this.clusterPos = tileUtils.roundPosToCluster(this.pos);
     this.posInCluster = new Pos(
         Math.floor((this.pos.x - this.clusterPos.x) / chunkSize),
         Math.floor((this.pos.y - this.clusterPos.y) / chunkSize),
@@ -136,23 +122,40 @@ Chunk.prototype.persist = function() {
     this.clusterFile = null;
 }
 
-// TEST CODE.
-/*
-var tempChunk1 = new Chunk(new Pos(10, 10));
-console.log(tempChunk1.tileList.slice(0, 50).join(", "));
-tempChunk1.persist();
-var tempChunk2 = new Chunk(new Pos(310, 10));
-console.log(tempChunk2.tileList.slice(0, 50).join(", "));
-tempChunk2.persist();
-*/
-
 function TileUtils() {
-
+    // Map from pos string representation to chunk.
+    this.chunkMap = {};
 }
 
 var tileUtils = new TileUtils();
 
 module.exports = tileUtils;
+
+TileUtils.prototype.roundPosToChunk = function(pos) {
+    return new Pos(
+        Math.floor(pos.x / chunkSize) * chunkSize,
+        Math.floor(pos.y / chunkSize) * chunkSize
+    );
+}
+
+TileUtils.prototype.roundPosToCluster = function(pos) {
+    return new Pos(
+        Math.floor(pos.x / clusterSize) * clusterSize,
+        Math.floor(pos.y / clusterSize) * clusterSize
+    );
+}
+
+TileUtils.prototype.convertPosToChunkKey = function(pos) {
+    return Math.floor(pos.x / chunkSize) + "," + Math.floor(pos.y / chunkSize);
+}
+
+TileUtils.prototype.getChunk = function(pos) {
+    var tempKey = this.convertPosToChunkKey(pos);
+    if (!(tempKey in this.chunkMap)) {
+        this.chunkMap[tempKey] = new Chunk(pos);
+    }
+    return this.chunkMap[tempKey];
+}
 
 TileUtils.prototype.tileSet = {
     EMPTY: 0,

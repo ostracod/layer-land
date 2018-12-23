@@ -1,9 +1,7 @@
 
 var gameDelegate = require("./gameDelegate");
 
-var tempResource = require("ostracod-multiplayer");
-var ostracodMultiplayer = tempResource.ostracodMultiplayer;
-var gameUtils = tempResource.gameUtils;
+var ostracodMultiplayer = require("ostracod-multiplayer").ostracodMultiplayer;
 
 console.log("Starting OstracodMultiplayer...");
 
