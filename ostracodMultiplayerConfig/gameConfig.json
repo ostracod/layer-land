@@ -11,8 +11,8 @@
     "instructionsViewFile": "instructions.html",
     "scripts": ["javascript/game.js"],
     "stylesheets": ["stylesheets/game.css"],
-    "canvasWidth": 1200,
-    "canvasHeight": 1200,
+    "canvasWidth": 1024,
+    "canvasHeight": 1024,
     "framesPerSecond": 25,
     "maximumPlayerCount": 15
 }

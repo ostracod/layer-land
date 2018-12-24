@@ -123,6 +123,7 @@ Chunk.prototype.persist = function() {
 }
 
 function TileUtils() {
+    this.chunkSize = chunkSize;
     // Map from pos string representation to chunk.
     this.chunkMap = {};
 }

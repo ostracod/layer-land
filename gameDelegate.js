@@ -6,6 +6,13 @@ var tileUtils = require("./tileUtils");
 
 var gameUtils = require("ostracod-multiplayer").gameUtils;
 
+function addSetInitializationInfoCommand(chunk, commandList) {
+    commandList.push({
+        commandName: "setInitializationInfo",
+        chunkSize: tileUtils.chunkSize
+    });
+}
+
 function addSetChunkCommand(chunk, commandList) {
     commandList.push({
         commandName: "setChunk",
@@ -13,6 +20,14 @@ function addSetChunkCommand(chunk, commandList) {
         tileData: chunk.tileList.join("")
     });
 }
+
+gameUtils.addCommandListener(
+    "getInitializationInfo",
+    true,
+    function(command, player, commandList) {
+        addSetInitializationInfoCommand(player, commandList);
+    }
+);
 
 gameUtils.addCommandListener(
     "getChunk",
