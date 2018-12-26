@@ -36,7 +36,16 @@ var playerQuarterOutline = [
     new Pos(1/4, 1),
     new Pos(1/4, 3/4),
     new Pos(0, 1/2)
-]
+];
+var localPlayerEntity = null;
+var chunkRequestDistance = 80;
+var chunkUnloadDistance = 160;
+var chunkRequestOffsetList = [
+    new Pos(-chunkRequestDistance, -chunkRequestDistance),
+    new Pos(chunkRequestDistance, -chunkRequestDistance),
+    new Pos(-chunkRequestDistance, chunkRequestDistance),
+    new Pos(chunkRequestDistance, chunkRequestDistance),
+];
 
 colorStringSet = [];
 var index = 0;
@@ -61,6 +70,8 @@ function addGetChunkCommand(pos) {
 
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
+    var tempPos = createPosFromJson(command.playerEntityPos);
+    localPlayerEntity = new PlayerEntity(tempPos);
 });
 
 addCommandListener("setChunk", function(command) {
@@ -103,6 +114,60 @@ function getTile(pos) {
         return null;
     }
     return tempChunk.getTile(pos);
+}
+
+function addGetChunkCommands() {
+    var chunkRequestPosList = [];
+    var index = 0;
+    while (index < chunkRequestOffsetList.length) {
+        var tempOffset = chunkRequestOffsetList[index];
+        index += 1;
+        var tempPos = localPlayerEntity.pos.copy();
+        tempPos.add(tempOffset);
+        tempPos = roundPosToChunk(tempPos);
+        var tempChunk = getChunk(tempPos);
+        if (tempChunk !== null) {
+            continue;
+        }
+        var tempHasFoundPos = false;
+        var tempIndex = 0;
+        while (tempIndex < chunkRequestPosList.length) {
+            var tempPos2 = chunkRequestPosList[tempIndex];
+            if (tempPos.equals(tempPos2)) {
+                tempHasFoundPos = true;
+                break;
+            }
+            tempIndex += 1;
+        }
+        if (tempHasFoundPos) {
+            continue;
+        }
+        chunkRequestPosList.push(tempPos);
+    }
+    var index = 0;
+    while (index < chunkRequestPosList.length) {
+        var tempPos = chunkRequestPosList[index];
+        addGetChunkCommand(tempPos);
+        index += 1;
+    }
+}
+
+function removeDistantChunks() {
+    var tempKeyToUnloadList = [];
+    var key;
+    for (key in chunkMap) {
+        var tempChunk = chunkMap[key];
+        var tempDistance = tempChunk.getOrthogonalDistance(localPlayerEntity.pos);
+        if (tempDistance >= chunkUnloadDistance) {
+            tempKeyToUnloadList.push(key);
+        }
+    }
+    var index = 0;
+    while (index < tempKeyToUnloadList.length) {
+        var tempKey = tempKeyToUnloadList[index];
+        delete chunkMap[tempKey];
+        index += 1;
+    }
 }
 
 function Chunk(pos, tileData) {
@@ -185,6 +250,26 @@ Chunk.prototype.drawShapeLayer = function() {
         }
         tempPos.y += 1;
     }
+}
+
+Chunk.prototype.getOrthogonalDistance = function(pos) {
+    var tempDistance1;
+    var tempDistance2;
+    if (pos.x < this.pos.x) {
+        tempDistance1 = this.pos.x - pos.x;
+    } else if (pos.x > this.pos.x + chunkSize - 1) {
+        tempDistance1 = pos.x - (this.pos.x + chunkSize - 1);
+    } else {
+        tempDistance1 = 0;
+    }
+    if (pos.y < this.pos.y) {
+        tempDistance2 = this.pos.y - pos.y;
+    } else if (pos.y > this.pos.y + chunkSize - 1) {
+        tempDistance2 = pos.y - (this.pos.y + chunkSize - 1);
+    } else {
+        tempDistance2 = 0;
+    }
+    return Math.max(tempDistance1, tempDistance2);
 }
 
 function PlayerEntity(pos) {
@@ -302,16 +387,23 @@ ClientDelegate.prototype.initialize = function() {
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    // TEST CODE.
-    addGetChunkCommand(new Pos(0, 0));
-    new PlayerEntity(new Pos(10, 10));
-}
-
-ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
     
 }
 
+ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
+    if (localPlayerEntity === null) {
+        return;
+    }
+    removeDistantChunks();
+    addGetChunkCommands();
+}
+
 ClientDelegate.prototype.timerEvent = function() {
+    if (localPlayerEntity === null) {
+        return;
+    }
+    cameraPos.x = localPlayerEntity.pos.x - Math.floor(canvasTileWidth / 2) + 1;
+    cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
     var tempBackgroundColor = colorSet[6];
     var index = 0;
     while (index < imageDataList.length) {
@@ -321,8 +413,9 @@ ClientDelegate.prototype.timerEvent = function() {
         imageDataList[index + 3] = 255;
         index += 4;
     }
-    var tempChunk = getChunk(new Pos(0, 0));
-    if (tempChunk !== null) {
+    var key;
+    for (key in chunkMap) {
+        var tempChunk = chunkMap[key];
         tempChunk.drawPixelLayer();
     }
     var index = 0;
@@ -333,7 +426,9 @@ ClientDelegate.prototype.timerEvent = function() {
     }
     tileContext.putImageData(imageData, 0, 0);
     context.drawImage(tileCanvas, 0, 0, canvasWidth, canvasHeight);
-    if (tempChunk !== null) {
+    var key;
+    for (key in chunkMap) {
+        var tempChunk = chunkMap[key];
         tempChunk.drawShapeLayer();
     }
     var index = 0;
