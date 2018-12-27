@@ -46,6 +46,7 @@ var chunkRequestOffsetList = [
     new Pos(-chunkRequestDistance, chunkRequestDistance),
     new Pos(chunkRequestDistance, chunkRequestDistance),
 ];
+var tileCursorOffset = new Pos(-1, 0);
 
 colorStringSet = [];
 var index = 0;
@@ -170,6 +171,31 @@ function removeDistantChunks() {
     }
 }
 
+function drawTileCursor(isShapeLayer) {
+    var tempBasePos = localPlayerEntity.pos.copy();
+    tempBasePos.add(tileCursorOffset);
+    tempBasePos.subtract(cameraPos);
+    if (!isShapeLayer && tileSize <= 30) {
+        drawPixel(tempBasePos.x, tempBasePos.y, colorSet[5]);
+    }
+    if (isShapeLayer && tileSize > 30) {
+        tempBasePos.scale(tileSize);
+        context.fillStyle = colorStringSet[5];
+        context.fillRect(tempBasePos.x, tempBasePos.y, tileSize, tileSize / 8);
+        context.fillRect(tempBasePos.x + tileSize * 7 / 8, tempBasePos.y, tileSize / 8, tileSize);
+        context.fillRect(tempBasePos.x, tempBasePos.y + tileSize * 7 / 8, tileSize, tileSize / 8);
+        context.fillRect(tempBasePos.x, tempBasePos.y, tileSize / 8, tileSize);
+    }
+}
+
+function drawTileCursorPixelLayer() {
+    drawTileCursor(false);
+}
+
+function drawTileCursorShapeLayer() {
+    drawTileCursor(true);
+}
+
 function Chunk(pos, tileData) {
     this.pos = roundPosToChunk(pos);
     this.tileList = [];
@@ -279,7 +305,7 @@ function PlayerEntity(pos) {
     playerEntityList.push(this);
 }
 
-PlayerEntity.prototype.drawQuarter = function(offsetX, offsetY, flipX, flipY) {
+PlayerEntity.prototype.drawQuarter = function(isShapeLayer, offsetX, offsetY, flipX, flipY) {
     var tempTilePos = this.pos.copy();
     tempTilePos.x += offsetX;
     tempTilePos.y += offsetY;
@@ -302,54 +328,55 @@ PlayerEntity.prototype.drawQuarter = function(offsetX, offsetY, flipX, flipY) {
             tempColorIndex = tileSet.BACK;
         }
     }
-    if (tileSize <= 30) {
+    if (!isShapeLayer && tileSize <= 30) {
         var tempColor = colorSet[tempColorIndex];
         drawPixel(tempBasePosX, tempBasePosY, tempColor);
-        return;
     }
-    var tempColorString = colorStringSet[tempColorIndex];
-    context.fillStyle = tempColorString;
-    context.beginPath();
-    var index = 0;
-    while (index < playerQuarterOutline.length) {
-        var tempOutlinePos = playerQuarterOutline[index];
-        var tempPosX = tempBasePosX;
-        var tempPosY = tempBasePosY;
-        if (flipX) {
-            tempPosX += 1 - tempOutlinePos.x;
-        } else {
-            tempPosX += tempOutlinePos.x;
+    if (isShapeLayer && tileSize > 30) {
+        var tempColorString = colorStringSet[tempColorIndex];
+        context.fillStyle = tempColorString;
+        context.beginPath();
+        var index = 0;
+        while (index < playerQuarterOutline.length) {
+            var tempOutlinePos = playerQuarterOutline[index];
+            var tempPosX = tempBasePosX;
+            var tempPosY = tempBasePosY;
+            if (flipX) {
+                tempPosX += 1 - tempOutlinePos.x;
+            } else {
+                tempPosX += tempOutlinePos.x;
+            }
+            if (flipY) {
+                tempPosY += 1 - tempOutlinePos.y;
+            } else {
+                tempPosY += tempOutlinePos.y;
+            }
+            tempPosX *= tileSize;
+            tempPosY *= tileSize;
+            if (index <= 0) {
+                context.moveTo(tempPosX, tempPosY);
+            } else {
+                context.lineTo(tempPosX, tempPosY);
+            }
+            index += 1;
         }
-        if (flipY) {
-            tempPosY += 1 - tempOutlinePos.y;
-        } else {
-            tempPosY += tempOutlinePos.y;
-        }
-        tempPosX *= tileSize;
-        tempPosY *= tileSize;
-        if (index <= 0) {
-            context.moveTo(tempPosX, tempPosY);
-        } else {
-            context.lineTo(tempPosX, tempPosY);
-        }
-        index += 1;
+        context.fill();
     }
-    context.fill();
 }
 
-PlayerEntity.prototype.drawAllQuarters = function() {
-    this.drawQuarter(0, 0, false, false);
-    this.drawQuarter(1, 0, true, false);
-    this.drawQuarter(0, 1, false, true);
-    this.drawQuarter(1, 1, true, true);
+PlayerEntity.prototype.drawAllQuarters = function(isShapeLayer) {
+    this.drawQuarter(isShapeLayer, 0, 0, false, false);
+    this.drawQuarter(isShapeLayer, 1, 0, true, false);
+    this.drawQuarter(isShapeLayer, 0, 1, false, true);
+    this.drawQuarter(isShapeLayer, 1, 1, true, true);
 }
 
 PlayerEntity.prototype.drawPixelLayer = function() {
-    this.drawAllQuarters();
+    this.drawAllQuarters(false);
 }
 
 PlayerEntity.prototype.drawShapeLayer = function() {
-    this.drawAllQuarters();
+    this.drawAllQuarters(true);
     if (tileSize > 30) {
         var tempPos = this.pos.copy();
         tempPos.subtract(cameraPos);
@@ -424,6 +451,7 @@ ClientDelegate.prototype.timerEvent = function() {
         tempPlayerEntity.drawPixelLayer();
         index += 1;
     }
+    drawTileCursorPixelLayer();
     tileContext.putImageData(imageData, 0, 0);
     context.drawImage(tileCanvas, 0, 0, canvasWidth, canvasHeight);
     var key;
@@ -436,6 +464,23 @@ ClientDelegate.prototype.timerEvent = function() {
         var tempPlayerEntity = playerEntityList[index];
         tempPlayerEntity.drawShapeLayer();
         index += 1;
+    }
+    drawTileCursorShapeLayer();
+}
+
+function moveTileCursor(offset) {
+    tileCursorOffset.add(offset);
+    if (tileCursorOffset.x < -2) {
+        tileCursorOffset.x = -2;
+    }
+    if (tileCursorOffset.x > 3) {
+        tileCursorOffset.x = 3;
+    }
+    if (tileCursorOffset.y < -2) {
+        tileCursorOffset.y = -2;
+    }
+    if (tileCursorOffset.y > 3) {
+        tileCursorOffset.y = 3;
     }
 }
 
@@ -454,6 +499,18 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
     }
     if (keyCode == 52) {
         setTileSize(8);
+    }
+    if (keyCode == 65) {
+        moveTileCursor(new Pos(-1, 0));
+    }
+    if (keyCode == 68) {
+        moveTileCursor(new Pos(1, 0));
+    }
+    if (keyCode == 87) {
+        moveTileCursor(new Pos(0, -1));
+    }
+    if (keyCode == 83) {
+        moveTileCursor(new Pos(0, 1));
     }
     return true;
 }
