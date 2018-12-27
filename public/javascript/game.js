@@ -117,6 +117,14 @@ function getTile(pos) {
     return tempChunk.getTile(pos);
 }
 
+function setTile(pos, tile) {
+    var tempChunk = getChunk(pos);
+    if (tempChunk === null) {
+        return;
+    }
+    tempChunk.setTile(pos, tile);
+}
+
 function addGetChunkCommands() {
     var chunkRequestPosList = [];
     var index = 0;
@@ -171,9 +179,14 @@ function removeDistantChunks() {
     }
 }
 
+function getTileCursorPos() {
+    var output = localPlayerEntity.pos.copy();
+    output.add(tileCursorOffset);
+    return output;
+}
+
 function drawTileCursor(isShapeLayer) {
-    var tempBasePos = localPlayerEntity.pos.copy();
-    tempBasePos.add(tileCursorOffset);
+    var tempBasePos = getTileCursorPos();
     tempBasePos.subtract(cameraPos);
     if (!isShapeLayer && tileSize <= 30) {
         drawPixel(tempBasePos.x, tempBasePos.y, colorSet[5]);
@@ -196,6 +209,30 @@ function drawTileCursorShapeLayer() {
     drawTileCursor(true);
 }
 
+function tileHasFront(tile) {
+    return (
+        tile == tileSet.FRONT
+        || tile == tileSet.FRONT_AND_BACK
+        || tile == tileSet.DIAMOND
+    );
+}
+
+function tileHasBack(tile) {
+    return (
+        tile == tileSet.BACK
+        || tile == tileSet.FRONT_AND_BACK
+        || tile == tileSet.DIAMOND
+    );
+}
+
+function tileHasComponent(tile, isInFront) {
+    if (isInFront) {
+        return tileHasFront(tile);
+    } else {
+        return tileHasBack(tile);
+    }
+}
+
 function Chunk(pos, tileData) {
     this.pos = roundPosToChunk(pos);
     this.tileList = [];
@@ -209,8 +246,18 @@ function Chunk(pos, tileData) {
     chunkMap[tempKey] = this;
 }
 
+Chunk.prototype.getTileIndex = function(pos) {
+    return (pos.x - this.pos.x) + (pos.y - this.pos.y) * chunkSize;
+}
+
 Chunk.prototype.getTile = function(pos) {
-    return this.tileList[(pos.x - this.pos.x) + (pos.y - this.pos.y) * chunkSize];
+    var index = this.getTileIndex(pos);
+    return this.tileList[index];
+}
+
+Chunk.prototype.setTile = function(pos, tile) {
+    var index = this.getTileIndex(pos);
+    this.tileList[index] = tile;
 }
 
 Chunk.prototype.getDrawBounds = function() {
@@ -484,6 +531,66 @@ function moveTileCursor(offset) {
     }
 }
 
+function placeTile(isInFront) {
+    var tempPos = getTileCursorPos();
+    var tempOldTile = getTile(tempPos);
+    if (tempOldTile === null || tempOldTile == tileSet.DIAMOND) {
+        return;
+    }
+    if (tileHasComponent(tempOldTile, isInFront)) {
+        return;
+    }
+    var tempNewTile = null;
+    if (isInFront) {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.FRONT;
+        } else if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.BACK;
+        } else if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    }
+    if (tempNewTile === null) {
+        return;
+    }
+    setTile(tempPos, tempNewTile);
+}
+
+function removeTile(isInFront) {
+    var tempPos = getTileCursorPos();
+    var tempOldTile = getTile(tempPos);
+    if (tempOldTile === null) {
+        return;
+    }
+    if (!tileHasComponent(tempOldTile, isInFront)) {
+        return;
+    }
+    var tempNewTile = null;
+    if (tempOldTile == tileSet.DIAMOND) {
+        tempNewTile = tileSet.EMPTY;
+    } else if (isInFront) {
+        if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.FRONT;
+        }
+    }
+    if (tempNewTile === null) {
+        return;
+    }
+    setTile(tempPos, tempNewTile);
+}
+
 ClientDelegate.prototype.keyDownEvent = function(keyCode) {
     if (focusedTextInput !== null) {
         return true;
@@ -511,6 +618,20 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
     }
     if (keyCode == 83) {
         moveTileCursor(new Pos(0, 1));
+    }
+    if (keyCode == 81) {
+        if (shiftKeyIsHeld) {
+            removeTile(false);
+        } else {
+            placeTile(false);
+        }
+    }
+    if (keyCode == 69) {
+        if (shiftKeyIsHeld) {
+            removeTile(true);
+        } else {
+            placeTile(true);
+        }
     }
     return true;
 }
