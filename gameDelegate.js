@@ -61,6 +61,26 @@ gameUtils.addCommandListener(
     }
 );
 
+gameUtils.addCommandListener(
+    "placeTile",
+    true,
+    function(command, player, commandList) {
+        var tempPos = createPosFromJson(command.pos);
+        var tempChunk = tileUtils.getChunk(tempPos);
+        tempChunk.placeTile(tempPos, command.isInFront);
+    }
+);
+
+gameUtils.addCommandListener(
+    "removeTile",
+    true,
+    function(command, player, commandList) {
+        var tempPos = createPosFromJson(command.pos);
+        var tempChunk = tileUtils.getChunk(tempPos);
+        tempChunk.removeTile(tempPos, command.isInFront);
+    }
+);
+
 function GameDelegate() {
     
 }
@@ -85,6 +105,8 @@ GameDelegate.prototype.playerLeaveEvent = function(player) {
 }
 
 GameDelegate.prototype.persistEvent = function(done) {
+    tileUtils.persistAllChunks();
+    tileUtils.removeDistantChunks();
     done();
 }
 

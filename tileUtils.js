@@ -1,5 +1,6 @@
 
 var Pos = require("./pos").Pos;
+var playerEntityList = require("./playerEntity").playerEntityList;
 
 var fs = require("fs");
 var pathUtils = require("path");
@@ -8,10 +9,18 @@ var clusterDirectory = "./clusters";
 var chunkSize = 200;
 var chunkLength = chunkSize * chunkSize;
 var chunkDataLength = Math.ceil(chunkLength / 2);
+var chunkUnloadDistance = 160;
 var clusterChunkSize = 10;
 var clusterChunkLength = clusterChunkSize * clusterChunkSize;
 var clusterSize = clusterChunkSize * chunkSize;
 var clusterHeaderLength = clusterChunkLength * 4;
+var tileSet = {
+    EMPTY: 0,
+    BACK: 1,
+    FRONT: 2,
+    FRONT_AND_BACK: 3,
+    DIAMOND: 4
+};
 
 // Format of cluster file:
 // (chunk look-up header) (chunk data) (chunk data) (chunk data)...
@@ -36,6 +45,7 @@ function Chunk(pos) {
         clusterDirectory,
         "cluster_" + this.clusterPos.x + "_" + this.clusterPos.y + ".dat"
     );
+    this.isDirty = false;
     this.tileList = null;
     this.clusterFileOffset = null;
     if (fs.existsSync(this.clusterPath)) {
@@ -82,9 +92,14 @@ Chunk.prototype.generateTiles = function() {
     while (this.tileList.length < chunkLength) {
         this.tileList.push(Math.floor(Math.random() * 5));
     }
+    this.isDirty = true;
 }
 
 Chunk.prototype.persist = function() {
+    if (!this.isDirty) {
+        return;
+    }
+    console.log("Persisting chunk at " + this.pos.toString() + "...");
     if (fs.existsSync(this.clusterPath)) {
         this.clusterFile = fs.openSync(this.clusterPath, "r+");
     } else {
@@ -120,6 +135,102 @@ Chunk.prototype.persist = function() {
     fs.writeSync(this.clusterFile, tempBuffer, 0, chunkDataLength, this.clusterFileOffset);
     fs.closeSync(this.clusterFile);
     this.clusterFile = null;
+    this.isDirty = false;
+}
+
+Chunk.prototype.getTileIndex = function(pos) {
+    return (pos.x - this.pos.x) + (pos.y - this.pos.y) * chunkSize;
+}
+
+Chunk.prototype.getTile = function(pos) {
+    var index = this.getTileIndex(pos);
+    return this.tileList[index];
+}
+
+Chunk.prototype.setTile = function(pos, tile) {
+    var index = this.getTileIndex(pos);
+    var tempOldTile = this.tileList[index];
+    if (tile != tempOldTile) {
+        this.tileList[index] = tile;
+        this.isDirty = true;
+    }
+}
+
+Chunk.prototype.placeTile = function(pos, isInFront) {
+    var tempOldTile = this.getTile(pos);
+    if (tempOldTile == tileSet.DIAMOND) {
+        return false;
+    }
+    if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    var tempNewTile = null;
+    if (isInFront) {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.FRONT;
+        } else if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.BACK;
+        } else if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    this.setTile(pos, tempNewTile);
+    return true;
+}
+
+Chunk.prototype.removeTile = function(pos, isInFront) {
+    var tempOldTile = this.getTile(pos);
+    if (!tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    var tempNewTile = null;
+    if (tempOldTile == tileSet.DIAMOND) {
+        tempNewTile = tileSet.EMPTY;
+    } else if (isInFront) {
+        if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.FRONT;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    this.setTile(pos, tempNewTile);
+    return true;
+}
+
+Chunk.prototype.getOrthogonalDistance = function(pos) {
+    var tempDistance1;
+    var tempDistance2;
+    if (pos.x < this.pos.x) {
+        tempDistance1 = this.pos.x - pos.x;
+    } else if (pos.x > this.pos.x + chunkSize - 1) {
+        tempDistance1 = pos.x - (this.pos.x + chunkSize - 1);
+    } else {
+        tempDistance1 = 0;
+    }
+    if (pos.y < this.pos.y) {
+        tempDistance2 = this.pos.y - pos.y;
+    } else if (pos.y > this.pos.y + chunkSize - 1) {
+        tempDistance2 = pos.y - (this.pos.y + chunkSize - 1);
+    } else {
+        tempDistance2 = 0;
+    }
+    return Math.max(tempDistance1, tempDistance2);
 }
 
 function TileUtils() {
@@ -158,12 +269,67 @@ TileUtils.prototype.getChunk = function(pos) {
     return this.chunkMap[tempKey];
 }
 
-TileUtils.prototype.tileSet = {
-    EMPTY: 0,
-    BACK: 1,
-    FRONT: 2,
-    FRONT_AND_BACK: 3,
-    DIAMOND: 4
-};
+TileUtils.prototype.tileHasFront = function(tile) {
+    return (
+        tile == tileSet.FRONT
+        || tile == tileSet.FRONT_AND_BACK
+        || tile == tileSet.DIAMOND
+    );
+}
+
+TileUtils.prototype.tileHasBack = function(tile) {
+    return (
+        tile == tileSet.BACK
+        || tile == tileSet.FRONT_AND_BACK
+        || tile == tileSet.DIAMOND
+    );
+}
+
+TileUtils.prototype.tileHasComponent = function(tile, isInFront) {
+    if (isInFront) {
+        return this.tileHasFront(tile);
+    } else {
+        return this.tileHasBack(tile);
+    }
+}
+
+TileUtils.prototype.persistAllChunks = function() {
+    var key;
+    for (key in this.chunkMap) {
+        var tempChunk = this.chunkMap[key];
+        tempChunk.persist();
+    }
+}
+
+TileUtils.prototype.removeDistantChunks = function() {
+    var tempKeyToUnloadList = [];
+    var key;
+    for (key in this.chunkMap) {
+        var tempChunk = this.chunkMap[key];
+        var tempShouldUnloadChunk = true;
+        var index = 0;
+        while (index < playerEntityList.length) {
+            var tempPlayerEntity = playerEntityList[index];
+            var tempPos = tempPlayerEntity.getPos();
+            var tempDistance = tempChunk.getOrthogonalDistance(tempPos);
+            if (tempDistance < chunkUnloadDistance) {
+                tempShouldUnloadChunk = false;
+                break;
+            }
+            index += 1;
+        }
+        if (tempShouldUnloadChunk) {
+            tempKeyToUnloadList.push(key);
+        }
+    }
+    var index = 0;
+    while (index < tempKeyToUnloadList.length) {
+        var tempKey = tempKeyToUnloadList[index];
+        delete this.chunkMap[tempKey];
+        index += 1;
+    }
+}
+
+TileUtils.prototype.tileSet = tileSet;
 
 

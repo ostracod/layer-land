@@ -69,6 +69,22 @@ function addGetChunkCommand(pos) {
     });
 }
 
+function addPlaceTileCommand(pos, isInFront) {
+    gameUpdateCommandList.push({
+        commandName: "placeTile",
+        pos: pos.toJson(),
+        isInFront: isInFront
+    });
+}
+
+function addRemoveTileCommand(pos, isInFront) {
+    gameUpdateCommandList.push({
+        commandName: "removeTile",
+        pos: pos.toJson(),
+        isInFront: isInFront
+    });
+}
+
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
     var tempPos = createPosFromJson(command.playerEntityPos);
@@ -558,6 +574,7 @@ function placeTile(isInFront) {
         return;
     }
     setTile(tempPos, tempNewTile);
+    addPlaceTileCommand(tempPos, isInFront);
 }
 
 function removeTile(isInFront) {
@@ -589,6 +606,7 @@ function removeTile(isInFront) {
         return;
     }
     setTile(tempPos, tempNewTile);
+    addRemoveTileCommand(tempPos, isInFront);
 }
 
 ClientDelegate.prototype.keyDownEvent = function(keyCode) {
