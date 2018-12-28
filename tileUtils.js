@@ -1,6 +1,5 @@
 
 var Pos = require("./pos").Pos;
-var playerEntityList = require("./playerEntity").playerEntityList;
 
 var fs = require("fs");
 var pathUtils = require("path");
@@ -87,10 +86,15 @@ Chunk.prototype.readTiles = function() {
 }
 
 Chunk.prototype.generateTiles = function() {
-    // TODO: Generate the correct tiles instead of random ones.
+    var tempTile;
+    if (this.pos.y >= 0) {
+        tempTile = tileSet.FRONT_AND_BACK;
+    } else {
+        tempTile = tileSet.EMPTY;
+    }
     this.tileList = [];
     while (this.tileList.length < chunkLength) {
-        this.tileList.push(Math.floor(Math.random() * 5));
+        this.tileList.push(tempTile);
     }
     this.isDirty = true;
 }
@@ -156,63 +160,6 @@ Chunk.prototype.setTile = function(pos, tile) {
     }
 }
 
-Chunk.prototype.placeTile = function(pos, isInFront) {
-    var tempOldTile = this.getTile(pos);
-    if (tempOldTile == tileSet.DIAMOND) {
-        return false;
-    }
-    if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
-        return false;
-    }
-    var tempNewTile = null;
-    if (isInFront) {
-        if (tempOldTile == tileSet.EMPTY) {
-            tempNewTile = tileSet.FRONT;
-        } else if (tempOldTile == tileSet.BACK) {
-            tempNewTile = tileSet.FRONT_AND_BACK;
-        }
-    } else {
-        if (tempOldTile == tileSet.EMPTY) {
-            tempNewTile = tileSet.BACK;
-        } else if (tempOldTile == tileSet.FRONT) {
-            tempNewTile = tileSet.FRONT_AND_BACK;
-        }
-    }
-    if (tempNewTile === null) {
-        return false;
-    }
-    this.setTile(pos, tempNewTile);
-    return true;
-}
-
-Chunk.prototype.removeTile = function(pos, isInFront) {
-    var tempOldTile = this.getTile(pos);
-    if (!tileUtils.tileHasComponent(tempOldTile, isInFront)) {
-        return false;
-    }
-    var tempNewTile = null;
-    if (tempOldTile == tileSet.DIAMOND) {
-        tempNewTile = tileSet.EMPTY;
-    } else if (isInFront) {
-        if (tempOldTile == tileSet.FRONT) {
-            tempNewTile = tileSet.EMPTY;
-        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
-            tempNewTile = tileSet.BACK;
-        }
-    } else {
-        if (tempOldTile == tileSet.BACK) {
-            tempNewTile = tileSet.EMPTY;
-        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
-            tempNewTile = tileSet.FRONT;
-        }
-    }
-    if (tempNewTile === null) {
-        return false;
-    }
-    this.setTile(pos, tempNewTile);
-    return true;
-}
-
 Chunk.prototype.getOrthogonalDistance = function(pos) {
     var tempDistance1;
     var tempDistance2;
@@ -242,6 +189,8 @@ function TileUtils() {
 var tileUtils = new TileUtils();
 
 module.exports = tileUtils;
+
+var playerEntityList = require("./playerEntity").playerEntityList;
 
 TileUtils.prototype.roundPosToChunk = function(pos) {
     return new Pos(
@@ -328,6 +277,79 @@ TileUtils.prototype.removeDistantChunks = function() {
         delete this.chunkMap[tempKey];
         index += 1;
     }
+}
+
+TileUtils.prototype.getTile = function(pos) {
+    var tempChunk = this.getChunk(pos);
+    if (tempChunk === null) {
+        return null;
+    }
+    return tempChunk.getTile(pos);
+}
+
+TileUtils.prototype.setTile = function(pos, tile) {
+    var tempChunk = this.getChunk(pos);
+    if (tempChunk === null) {
+        return;
+    }
+    tempChunk.setTile(pos, tile);
+}
+
+TileUtils.prototype.placeTile = function(pos, isInFront) {
+    var tempOldTile = this.getTile(pos);
+    if (tempOldTile == tileSet.DIAMOND) {
+        return false;
+    }
+    if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    var tempNewTile = null;
+    if (isInFront) {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.FRONT;
+        } else if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.BACK;
+        } else if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    this.setTile(pos, tempNewTile);
+    return true;
+}
+
+TileUtils.prototype.removeTile = function(pos, isInFront) {
+    var tempOldTile = this.getTile(pos);
+    if (!tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    var tempNewTile = null;
+    if (tempOldTile == tileSet.DIAMOND) {
+        tempNewTile = tileSet.EMPTY;
+    } else if (isInFront) {
+        if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.FRONT;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    this.setTile(pos, tempNewTile);
+    return true;
 }
 
 TileUtils.prototype.tileSet = tileSet;

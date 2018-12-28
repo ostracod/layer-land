@@ -19,7 +19,7 @@ var tileSet = {
 };
 var colorSet = [
     new Color(133, 233, 251),
-    new Color(98, 212, 134),
+    new Color(73, 212, 114),
     new Color(233, 142, 228),
     new Color(132, 83, 214),
     new Color(232, 52, 108),
@@ -37,6 +37,7 @@ var playerQuarterOutline = [
     new Pos(1/4, 3/4),
     new Pos(0, 1/2)
 ];
+var playerEntitySize = 2;
 var localPlayerEntity = null;
 var chunkRequestDistance = 80;
 var chunkUnloadDistance = 160;
@@ -368,6 +369,41 @@ function PlayerEntity(pos) {
     playerEntityList.push(this);
 }
 
+PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
+    var tempPos = new Pos(0, 0);
+    var tempOffset = new Pos(0, 0);
+    while (tempOffset.y < playerEntitySize) {
+        tempPos.set(pos);
+        tempPos.add(tempOffset);
+        var tempTile = getTile(tempPos);
+        if (tileHasComponent(tempTile, isInFront)) {
+            return true;
+        }
+        tempOffset.x += 1;
+        if (tempOffset.x >= playerEntitySize) {
+            tempOffset.x = 0;
+            tempOffset.y += 1;
+        }
+    }
+    return false;
+}
+
+PlayerEntity.prototype.walk = function(offsetX) {
+    var tempPos = this.pos.copy();
+    tempPos.x += offsetX;
+    if (!this.hasCollision(tempPos, this.isInFront)) {
+        this.pos.set(tempPos);
+    }
+    this.direction = offsetX;
+}
+
+PlayerEntity.prototype.changeLayer = function() {
+    var tempNextIsInFront = !this.isInFront;
+    if (!this.hasCollision(this.pos, tempNextIsInFront)) {
+        this.isInFront = tempNextIsInFront;
+    }
+}
+
 PlayerEntity.prototype.drawQuarter = function(isShapeLayer, offsetX, offsetY, flipX, flipY) {
     var tempTilePos = this.pos.copy();
     tempTilePos.x += offsetX;
@@ -650,6 +686,15 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
         } else {
             placeTile(true);
         }
+    }
+    if (keyCode == 37) {
+        localPlayerEntity.walk(-1);
+    }
+    if (keyCode == 39) {
+        localPlayerEntity.walk(1);
+    }
+    if (keyCode == 32) {
+        localPlayerEntity.changeLayer();
     }
     return true;
 }

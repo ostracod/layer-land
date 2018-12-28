@@ -66,8 +66,7 @@ gameUtils.addCommandListener(
     true,
     function(command, player, commandList) {
         var tempPos = createPosFromJson(command.pos);
-        var tempChunk = tileUtils.getChunk(tempPos);
-        tempChunk.placeTile(tempPos, command.isInFront);
+        tileUtils.placeTile(tempPos, command.isInFront);
     }
 );
 
@@ -76,8 +75,7 @@ gameUtils.addCommandListener(
     true,
     function(command, player, commandList) {
         var tempPos = createPosFromJson(command.pos);
-        var tempChunk = tileUtils.getChunk(tempPos);
-        tempChunk.removeTile(tempPos, command.isInFront);
+        tileUtils.removeTile(tempPos, command.isInFront);
     }
 );
 
