@@ -13,7 +13,7 @@
     "stylesheets": ["stylesheets/game.css"],
     "canvasWidth": 1024,
     "canvasHeight": 1024,
-    "framesPerSecond": 25,
+    "framesPerSecond": 30,
     "maximumPlayerCount": 15
 }
 

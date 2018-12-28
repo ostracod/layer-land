@@ -48,6 +48,10 @@ var chunkRequestOffsetList = [
     new Pos(chunkRequestDistance, chunkRequestDistance),
 ];
 var tileCursorOffset = new Pos(-1, 0);
+var miningPos = null;
+var miningIsInFront = false;
+var miningDelay = 0;
+var maximumMiningDelay = 40;
 
 colorStringSet = [];
 var index = 0;
@@ -254,6 +258,64 @@ function tileHasComponent(tile, isInFront) {
     } else {
         return tileHasBack(tile);
     }
+}
+
+function drawMiningProgressShapeLayer() {
+    if (miningPos === null) {
+        return false;
+    }
+    if (tileSize <= 30) {
+        return;
+    }
+    var tempAngle = Math.PI * 2 * miningDelay / maximumMiningDelay;
+    var tempPos = miningPos.copy();
+    tempPos.subtract(cameraPos);
+    tempPos.scale(tileSize);
+    context.fillStyle = colorStringSet[5];
+    context.beginPath();
+    context.moveTo(tempPos.x + tileSize / 2, tempPos.y + tileSize / 2);
+    context.lineTo(tempPos.x + tileSize / 2, tempPos.y);
+    if (tempAngle <= Math.PI / 4) {
+        context.lineTo(
+            tempPos.x + (1 + Math.tan(tempAngle)) * tileSize / 2,
+            tempPos.y
+        );
+        context.fill();
+        return;
+    }
+    context.lineTo(tempPos.x + tileSize, tempPos.y);
+    if (tempAngle <= Math.PI * 3 / 4) {
+        context.lineTo(
+            tempPos.x + tileSize,
+            tempPos.y + (1 + Math.tan(tempAngle - Math.PI / 2)) * tileSize / 2
+        );
+        context.fill();
+        return;
+    }
+    context.lineTo(tempPos.x + tileSize, tempPos.y + tileSize);
+    if (tempAngle <= Math.PI * 5 / 4) {
+        context.lineTo(
+            tempPos.x + (1 - Math.tan(tempAngle - Math.PI)) * tileSize / 2,
+            tempPos.y + tileSize
+        );
+        context.fill();
+        return;
+    }
+    context.lineTo(tempPos.x, tempPos.y + tileSize);
+    if (tempAngle <= Math.PI * 7 / 4) {
+        context.lineTo(
+            tempPos.x,
+            tempPos.y + (1 - Math.tan(tempAngle - Math.PI * 3 / 2)) * tileSize / 2
+        );
+        context.fill();
+        return;
+    }
+    context.lineTo(tempPos.x, tempPos.y);
+    context.lineTo(
+        tempPos.x + (1 + Math.tan(tempAngle - Math.PI * 2)) * tileSize / 2,
+        tempPos.y
+    );
+    context.fill();
 }
 
 function Chunk(pos, tileData) {
@@ -617,6 +679,7 @@ function drawShapeLayer() {
         tempPlayerEntity.drawShapeLayer();
         index += 1;
     }
+    drawMiningProgressShapeLayer();
     drawTileCursorShapeLayer();
 }
 
@@ -629,6 +692,12 @@ ClientDelegate.prototype.timerEvent = function() {
         var tempPlayerEntity = playerEntityList[index];
         tempPlayerEntity.tick();
         index += 1;
+    }
+    if (miningPos !== null) {
+        miningDelay += 1;
+        if (miningDelay >= maximumMiningDelay) {
+            finishMining();
+        }
     }
     cameraPos.x = localPlayerEntity.pos.x - Math.floor(canvasTileWidth / 2) + 1;
     cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
@@ -682,7 +751,10 @@ function placeTile(isInFront) {
     addPlaceTileCommand(tempPos, isInFront);
 }
 
-function removeTile(isInFront) {
+function startMining(isInFront) {
+    if (miningPos !== null) {
+        return;
+    }
     var tempPos = getTileCursorPos();
     var tempOldTile = getTile(tempPos);
     if (tempOldTile === null) {
@@ -691,10 +763,24 @@ function removeTile(isInFront) {
     if (!tileHasComponent(tempOldTile, isInFront)) {
         return;
     }
+    miningPos = tempPos;
+    miningIsInFront = isInFront;
+    miningDelay = 0;
+}
+
+function finishMining() {
+    var tempPos = getTileCursorPos();
+    var tempOldTile = getTile(miningPos);
+    if (tempOldTile === null) {
+        return;
+    }
+    if (!tileHasComponent(tempOldTile, miningIsInFront)) {
+        return;
+    }
     var tempNewTile = null;
     if (tempOldTile == tileSet.DIAMOND) {
         tempNewTile = tileSet.EMPTY;
-    } else if (isInFront) {
+    } else if (miningIsInFront) {
         if (tempOldTile == tileSet.FRONT) {
             tempNewTile = tileSet.EMPTY;
         } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
@@ -710,8 +796,9 @@ function removeTile(isInFront) {
     if (tempNewTile === null) {
         return;
     }
-    setTile(tempPos, tempNewTile);
-    addRemoveTileCommand(tempPos, isInFront);
+    setTile(miningPos, tempNewTile);
+    addRemoveTileCommand(miningPos, miningIsInFront);
+    miningPos = null;
 }
 
 ClientDelegate.prototype.keyDownEvent = function(keyCode) {
@@ -744,26 +831,29 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
     }
     if (keyCode == 81) {
         if (shiftKeyIsHeld) {
-            removeTile(false);
+            startMining(false);
         } else {
             placeTile(false);
         }
     }
     if (keyCode == 69) {
         if (shiftKeyIsHeld) {
-            removeTile(true);
+            startMining(true);
         } else {
             placeTile(true);
         }
     }
     if (keyCode == 37) {
         localPlayerEntity.walk(-1);
+        return false;
     }
     if (keyCode == 39) {
         localPlayerEntity.walk(1);
+        return false;
     }
     if (keyCode == 32) {
         localPlayerEntity.changeLayer();
+        return false;
     }
     return true;
 }
