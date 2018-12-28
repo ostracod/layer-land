@@ -226,19 +226,25 @@ function drawTileCursorShapeLayer() {
     drawTileCursor(true);
 }
 
+function tileHasFrontAndBack(tile) {
+    return (
+        tile === tileSet.FRONT_AND_BACK
+        || tile === tileSet.DIAMOND
+        || tile === null
+    );
+}
+
 function tileHasFront(tile) {
     return (
-        tile == tileSet.FRONT
-        || tile == tileSet.FRONT_AND_BACK
-        || tile == tileSet.DIAMOND
+        tile === tileSet.FRONT
+        || tileHasFrontAndBack(tile)
     );
 }
 
 function tileHasBack(tile) {
     return (
-        tile == tileSet.BACK
-        || tile == tileSet.FRONT_AND_BACK
-        || tile == tileSet.DIAMOND
+        tile === tileSet.BACK
+        || tileHasFrontAndBack(tile)
     );
 }
 
@@ -366,6 +372,7 @@ function PlayerEntity(pos) {
     this.pos = pos;
     this.isInFront = true;
     this.direction = 1;
+    this.fallDelay = 0;
     playerEntityList.push(this);
 }
 
@@ -388,19 +395,67 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     return false;
 }
 
-PlayerEntity.prototype.walk = function(offsetX) {
+PlayerEntity.prototype.getIsOnGround = function() {
     var tempPos = this.pos.copy();
-    tempPos.x += offsetX;
+    tempPos.y += 1;
+    return this.hasCollision(tempPos, this.isInFront);
+}
+
+PlayerEntity.prototype.fall = function() {
+    var tempPos = this.pos.copy();
+    tempPos.y += 1;
     if (!this.hasCollision(tempPos, this.isInFront)) {
         this.pos.set(tempPos);
+        return true;
     }
+    return false;
+}
+
+PlayerEntity.prototype.walk = function(offsetX) {
     this.direction = offsetX;
+    if (!this.getIsOnGround()) {
+        return false;
+    }
+    var tempPos = this.pos.copy();
+    tempPos.x += offsetX;
+    if (this.hasCollision(tempPos, this.isInFront)) {
+        // Try to walk up a stair.
+        tempPos.set(this.pos);
+        tempPos.y -= 1;
+        if (!this.hasCollision(tempPos, this.isInFront)) {
+            tempPos.x += offsetX;
+            if (!this.hasCollision(tempPos, this.isInFront)) {
+                this.pos.set(tempPos);
+                return true;
+            }
+        }
+        return false;
+    } else {
+        this.pos.set(tempPos);
+        return true;
+    }
 }
 
 PlayerEntity.prototype.changeLayer = function() {
+    if (!this.getIsOnGround()) {
+        return false;
+    }
     var tempNextIsInFront = !this.isInFront;
     if (!this.hasCollision(this.pos, tempNextIsInFront)) {
         this.isInFront = tempNextIsInFront;
+        return true;
+    }
+    return false;
+}
+
+PlayerEntity.prototype.tick = function() {
+    if (this.fallDelay > 0) {
+        this.fallDelay -= 1;
+    } else {
+        var tempResult = this.fall();
+        if (tempResult) {
+            this.fallDelay = 1;
+        }
     }
 }
 
@@ -524,12 +579,7 @@ ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
     addGetChunkCommands();
 }
 
-ClientDelegate.prototype.timerEvent = function() {
-    if (localPlayerEntity === null) {
-        return;
-    }
-    cameraPos.x = localPlayerEntity.pos.x - Math.floor(canvasTileWidth / 2) + 1;
-    cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
+function drawPixelLayer() {
     var tempBackgroundColor = colorSet[6];
     var index = 0;
     while (index < imageDataList.length) {
@@ -553,6 +603,9 @@ ClientDelegate.prototype.timerEvent = function() {
     drawTileCursorPixelLayer();
     tileContext.putImageData(imageData, 0, 0);
     context.drawImage(tileCanvas, 0, 0, canvasWidth, canvasHeight);
+}
+
+function drawShapeLayer() {
     var key;
     for (key in chunkMap) {
         var tempChunk = chunkMap[key];
@@ -565,6 +618,22 @@ ClientDelegate.prototype.timerEvent = function() {
         index += 1;
     }
     drawTileCursorShapeLayer();
+}
+
+ClientDelegate.prototype.timerEvent = function() {
+    if (localPlayerEntity === null) {
+        return;
+    }
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.tick();
+        index += 1;
+    }
+    cameraPos.x = localPlayerEntity.pos.x - Math.floor(canvasTileWidth / 2) + 1;
+    cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
+    drawPixelLayer();
+    drawShapeLayer();
 }
 
 function moveTileCursor(offset) {

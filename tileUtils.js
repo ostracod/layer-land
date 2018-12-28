@@ -218,19 +218,25 @@ TileUtils.prototype.getChunk = function(pos) {
     return this.chunkMap[tempKey];
 }
 
+TileUtils.prototype.tileHasFrontAndBack = function(tile) {
+    return (
+        tile === tileSet.FRONT_AND_BACK
+        || tile === tileSet.DIAMOND
+        || tile === null
+    );
+}
+
 TileUtils.prototype.tileHasFront = function(tile) {
     return (
-        tile == tileSet.FRONT
-        || tile == tileSet.FRONT_AND_BACK
-        || tile == tileSet.DIAMOND
+        tile === tileSet.FRONT
+        || tileUtils.tileHasFrontAndBack(tile)
     );
 }
 
 TileUtils.prototype.tileHasBack = function(tile) {
     return (
-        tile == tileSet.BACK
-        || tile == tileSet.FRONT_AND_BACK
-        || tile == tileSet.DIAMOND
+        tile === tileSet.BACK
+        || tileUtils.tileHasFrontAndBack(tile)
     );
 }
 
