@@ -40,6 +40,10 @@
                 {
                     "name": "backTileCount",
                     "type": "INT"
+                },
+                {
+                    "name": "isInFront",
+                    "type": "INT"
                 }
             ]
         }

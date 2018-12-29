@@ -128,7 +128,7 @@ function addVerifyPosCommand() {
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
     var tempPos = createPosFromJson(command.playerEntityPos);
-    localPlayerEntity = new PlayerEntity(tempPos);
+    localPlayerEntity = new PlayerEntity(tempPos, command.playerEntityIsInFront);
 });
 
 addCommandListener("setChunk", function(command) {
@@ -383,9 +383,9 @@ Chunk.prototype.getOrthogonalDistance = function(pos) {
     return Math.max(tempDistance1, tempDistance2);
 }
 
-function PlayerEntity(pos) {
+function PlayerEntity(pos, isInFront) {
     this.pos = pos;
-    this.isInFront = true;
+    this.isInFront = isInFront;
     this.direction = 1;
     this.fallDelay = 0;
     this.tileCursorOffset = new Pos(-1, 0);

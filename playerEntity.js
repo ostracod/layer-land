@@ -6,7 +6,6 @@ var playerEntityList = [];
 
 function PlayerEntity(player) {
     this.player = player;
-    this.isInFront = true;
     playerEntityList.push(this);
     var tempPos = this.getPos();
     while (true) {
@@ -25,6 +24,9 @@ module.exports = {
 
 var tileUtils = require("./tileUtils");
 
+// We need these accessors in OstracodMultiplayer 1.0 because
+// delegate persistence event occurs after persisting players.
+// I plan to fix this in 1.1.
 PlayerEntity.prototype.getPos = function() {
     return new Pos(
         this.player.extraFields.posX,
@@ -35,6 +37,14 @@ PlayerEntity.prototype.getPos = function() {
 PlayerEntity.prototype.setPos = function(pos) {
     this.player.extraFields.posX = pos.x;
     this.player.extraFields.posY = pos.y;
+}
+
+PlayerEntity.prototype.getIsInFront = function(isInFront) {
+    return this.player.extraFields.isInFront;
+}
+
+PlayerEntity.prototype.setIsInFront = function(isInFront) {
+    this.player.extraFields.isInFront = isInFront;
 }
 
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
@@ -59,13 +69,13 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
 PlayerEntity.prototype.getIsOnGround = function() {
     var tempPos = this.getPos();
     tempPos.y += 1;
-    return this.hasCollision(tempPos, this.isInFront);
+    return this.hasCollision(tempPos, this.getIsInFront());
 }
 
 PlayerEntity.prototype.fall = function() {
     var tempPos = this.getPos();
     tempPos.y += 1;
-    if (this.hasCollision(tempPos, this.isInFront)) {
+    if (this.hasCollision(tempPos, this.getIsInFront())) {
         return false;
     }
     this.setPos(tempPos);
@@ -78,15 +88,15 @@ PlayerEntity.prototype.walk = function(offsetX) {
     }
     var tempPos = this.getPos();
     tempPos.x += offsetX;
-    if (this.hasCollision(tempPos, this.isInFront)) {
+    if (this.hasCollision(tempPos, this.getIsInFront())) {
         // Try to walk up a stair.
         var tempPos = this.getPos();
         tempPos.y -= 1;
-        if (this.hasCollision(tempPos, this.isInFront)) {
+        if (this.hasCollision(tempPos, this.getIsInFront())) {
             return false;
         }
         tempPos.x += offsetX;
-        if (this.hasCollision(tempPos, this.isInFront)) {
+        if (this.hasCollision(tempPos, this.getIsInFront())) {
             return false;
         }
         this.setPos(tempPos);
@@ -100,7 +110,7 @@ PlayerEntity.prototype.setLayer = function(isInFront) {
     if (this.hasCollision(this.getPos(), isInFront)) {
         return false;
     }
-    this.isInFront = isInFront;
+    this.setIsInFront(isInFront);
     return true;
 }
 

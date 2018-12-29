@@ -31,7 +31,8 @@ function addSetInitializationInfoCommand(player, commandList) {
     commandList.push({
         commandName: "setInitializationInfo",
         chunkSize: tileUtils.chunkSize,
-        playerEntityPos: tempPlayerEntity.getPos().toJson()
+        playerEntityPos: tempPlayerEntity.getPos().toJson(),
+        playerEntityIsInFront: tempPlayerEntity.getIsInFront()
     });
 }
 
@@ -47,7 +48,7 @@ function addSetPosCommand(playerEntity, commandList) {
     commandList.push({
         commandName: "setPos",
         pos: playerEntity.getPos().toJson(),
-        isInFront: playerEntity.isInFront
+        isInFront: playerEntity.getIsInFront()
     });
 }
 
@@ -136,7 +137,7 @@ gameUtils.addCommandListener(
         var tempPos1 = createPosFromJson(command.pos);
         var tempPos2 = tempPlayerEntity.getPos();
         if (!tempPos1.equals(tempPos2)
-                || command.isInFront != tempPlayerEntity.isInFront) {
+                || command.isInFront != tempPlayerEntity.getIsInFront()) {
             addSetPosCommand(tempPlayerEntity, commandList);
         }
     }
