@@ -56,4 +56,52 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     return false;
 }
 
+PlayerEntity.prototype.getIsOnGround = function() {
+    var tempPos = this.getPos();
+    tempPos.y += 1;
+    return this.hasCollision(tempPos, this.isInFront);
+}
+
+PlayerEntity.prototype.fall = function() {
+    var tempPos = this.getPos();
+    tempPos.y += 1;
+    if (this.hasCollision(tempPos, this.isInFront)) {
+        return false;
+    }
+    this.setPos(tempPos);
+    return true;
+}
+
+PlayerEntity.prototype.walk = function(offsetX) {
+    if (!this.getIsOnGround()) {
+        return false;
+    }
+    var tempPos = this.getPos();
+    tempPos.x += offsetX;
+    if (this.hasCollision(tempPos, this.isInFront)) {
+        // Try to walk up a stair.
+        var tempPos = this.getPos();
+        tempPos.y -= 1;
+        if (this.hasCollision(tempPos, this.isInFront)) {
+            return false;
+        }
+        tempPos.x += offsetX;
+        if (this.hasCollision(tempPos, this.isInFront)) {
+            return false;
+        }
+        this.setPos(tempPos);
+    } else {
+        this.setPos(tempPos);
+    }
+    return true;
+}
+
+PlayerEntity.prototype.setLayer = function(isInFront) {
+    if (this.hasCollision(this.getPos(), isInFront)) {
+        return false;
+    }
+    this.isInFront = isInFront;
+    return true;
+}
+
 

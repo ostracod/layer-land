@@ -43,6 +43,14 @@ function addSetChunkCommand(chunk, commandList) {
     });
 }
 
+function addSetPosCommand(playerEntity, commandList) {
+    commandList.push({
+        commandName: "setPos",
+        pos: playerEntity.getPos().toJson(),
+        isInFront: playerEntity.isInFront
+    });
+}
+
 gameUtils.addCommandListener(
     "getInitializationInfo",
     true,
@@ -55,6 +63,7 @@ gameUtils.addCommandListener(
     "getChunk",
     true,
     function(command, player, commandList) {
+        // TODO: Verify that this pos is within range.
         var tempPos = createPosFromJson(command.pos);
         var tempChunk = tileUtils.getChunk(tempPos);
         addSetChunkCommand(tempChunk, commandList);
@@ -62,20 +71,74 @@ gameUtils.addCommandListener(
 );
 
 gameUtils.addCommandListener(
-    "placeTile",
+    "fall",
     true,
     function(command, player, commandList) {
-        var tempPos = createPosFromJson(command.pos);
-        tileUtils.placeTile(tempPos, command.isInFront);
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.fall();
     }
 );
 
 gameUtils.addCommandListener(
-    "removeTile",
+    "walk",
     true,
     function(command, player, commandList) {
-        var tempPos = createPosFromJson(command.pos);
-        tileUtils.removeTile(tempPos, command.isInFront);
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        var tempOffsetX = command.offsetX;
+        if (tempOffsetX == -1 || tempOffsetX == 1) {
+            tempPlayerEntity.walk(tempOffsetX);
+        }
+    }
+);
+
+gameUtils.addCommandListener(
+    "setLayer",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.setLayer(command.isInFront);
+    }
+);
+
+gameUtils.addCommandListener(
+    "placeTile",
+    true,
+    function(command, player, commandList) {
+        // TODO: Implement.
+        
+    }
+);
+
+gameUtils.addCommandListener(
+    "startMining",
+    true,
+    function(command, player, commandList) {
+        // TODO: Implement.
+        
+    }
+);
+
+gameUtils.addCommandListener(
+    "finishMining",
+    true,
+    function(command, player, commandList) {
+        // TODO: Implement.
+        
+    }
+);
+
+gameUtils.addCommandListener(
+    "verifyPos",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.direction = command.direction;
+        var tempPos1 = createPosFromJson(command.pos);
+        var tempPos2 = tempPlayerEntity.getPos();
+        if (!tempPos1.equals(tempPos2)
+                || command.isInFront != tempPlayerEntity.isInFront) {
+            addSetPosCommand(tempPlayerEntity, commandList);
+        }
     }
 );
 

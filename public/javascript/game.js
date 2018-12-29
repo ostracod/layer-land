@@ -74,6 +74,26 @@ function addGetChunkCommand(pos) {
     });
 }
 
+function addFallCommand() {
+    gameUpdateCommandList.push({
+        commandName: "fall"
+    });
+}
+
+function addWalkCommand(offsetX) {
+    gameUpdateCommandList.push({
+        commandName: "walk",
+        offsetX: offsetX
+    });
+}
+
+function addSetLayerCommand(isInFront) {
+    gameUpdateCommandList.push({
+        commandName: "setLayer",
+        isInFront: isInFront
+    });
+}
+
 function addPlaceTileCommand(pos, isInFront) {
     gameUpdateCommandList.push({
         commandName: "placeTile",
@@ -82,11 +102,26 @@ function addPlaceTileCommand(pos, isInFront) {
     });
 }
 
-function addRemoveTileCommand(pos, isInFront) {
+function addStartMiningCommand(pos, isInFront) {
     gameUpdateCommandList.push({
-        commandName: "removeTile",
+        commandName: "startMining",
         pos: pos.toJson(),
         isInFront: isInFront
+    });
+}
+
+function addFinishMiningCommand() {
+    gameUpdateCommandList.push({
+        commandName: "finishMining"
+    });
+}
+
+function addVerifyPosCommand() {
+    gameUpdateCommandList.push({
+        commandName: "verifyPos",
+        pos: localPlayerEntity.pos.toJson(),
+        isInFront: localPlayerEntity.isInFront,
+        direction: localPlayerEntity.direction
     });
 }
 
@@ -99,6 +134,12 @@ addCommandListener("setInitializationInfo", function(command) {
 addCommandListener("setChunk", function(command) {
     var tempPos = createPosFromJson(command.pos);
     new Chunk(tempPos, command.tileData);
+});
+
+addCommandListener("setPos", function(command) {
+    console.log("PLAYER MOVED WRONGLY!");
+    localPlayerEntity.pos = createPosFromJson(command.pos);
+    localPlayerEntity.isInFront = command.isInFront;
 });
 
 function roundPosToChunk(pos) {
@@ -392,6 +433,9 @@ PlayerEntity.prototype.fall = function() {
         return false;
     }
     this.pos.set(tempPos);
+    if (this == localPlayerEntity) {
+        addFallCommand();
+    }
     this.fallDelay = 2;
     return true;
 }
@@ -421,20 +465,23 @@ PlayerEntity.prototype.walk = function(offsetX) {
     } else {
         this.pos.set(tempPos);
     }
+    if (this == localPlayerEntity) {
+        addWalkCommand(offsetX);
+    }
     this.walkDelay = 3;
     return true;
 }
 
 PlayerEntity.prototype.changeLayer = function() {
-    if (!this.getIsOnGround()) {
+    var tempNextIsInFront = !this.isInFront;
+    if (this.hasCollision(this.pos, tempNextIsInFront)) {
         return false;
     }
-    var tempNextIsInFront = !this.isInFront;
-    if (!this.hasCollision(this.pos, tempNextIsInFront)) {
-        this.isInFront = tempNextIsInFront;
-        return true;
+    this.isInFront = tempNextIsInFront;
+    if (this == localPlayerEntity) {
+        addSetLayerCommand(tempNextIsInFront);
     }
-    return false;
+    return true;
 }
 
 PlayerEntity.prototype.getTileCursorPos = function() {
@@ -508,11 +555,14 @@ PlayerEntity.prototype.startMining = function(isInFront) {
     this.miningPos = this.getTileCursorPos();
     this.miningIsInFront = isInFront;
     this.miningDelay = 0;
+    addStartMiningCommand(this.miningPos, this.miningIsInFront);
 }
 
 PlayerEntity.prototype.finishMining = function() {
-    var tempPos = this.getTileCursorPos();
-    var tempOldTile = getTile(this.miningPos);
+    addFinishMiningCommand();
+    var tempPos = this.miningPos;
+    this.miningPos = null;
+    var tempOldTile = getTile(tempPos);
     if (tempOldTile === null) {
         return;
     }
@@ -538,9 +588,7 @@ PlayerEntity.prototype.finishMining = function() {
     if (tempNewTile === null) {
         return;
     }
-    setTile(this.miningPos, tempNewTile);
-    addRemoveTileCommand(this.miningPos, this.miningIsInFront);
-    this.miningPos = null;
+    setTile(tempPos, tempNewTile);
 }
 
 PlayerEntity.prototype.tick = function() {
@@ -787,6 +835,7 @@ ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
     }
     removeDistantChunks();
     addGetChunkCommands();
+    addVerifyPosCommand();
 }
 
 function drawPixelLayer() {
