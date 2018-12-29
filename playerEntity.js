@@ -6,15 +6,18 @@ var playerEntityList = [];
 
 function PlayerEntity(player) {
     this.player = player;
+    this.pos = new Pos(
+        this.player.extraFields.posX,
+        this.player.extraFields.posY
+    );
+    this.isInFront = this.player.extraFields.isInFront;
     playerEntityList.push(this);
-    var tempPos = this.getPos();
     while (true) {
-        if (!this.hasCollision(tempPos, this.isInFront)) {
+        if (!this.hasCollision(this.pos, this.isInFront)) {
             break;
         }
-        tempPos.y -= 1;
+        this.pos.y -= 1;
     }
-    this.setPos(tempPos);
 }
 
 module.exports = {
@@ -24,27 +27,10 @@ module.exports = {
 
 var tileUtils = require("./tileUtils");
 
-// We need these accessors in OstracodMultiplayer 1.0 because
-// delegate persistence event occurs after persisting players.
-// I plan to fix this in 1.1.
-PlayerEntity.prototype.getPos = function() {
-    return new Pos(
-        this.player.extraFields.posX,
-        this.player.extraFields.posY,
-    );
-}
-
-PlayerEntity.prototype.setPos = function(pos) {
-    this.player.extraFields.posX = pos.x;
-    this.player.extraFields.posY = pos.y;
-}
-
-PlayerEntity.prototype.getIsInFront = function(isInFront) {
-    return this.player.extraFields.isInFront;
-}
-
-PlayerEntity.prototype.setIsInFront = function(isInFront) {
-    this.player.extraFields.isInFront = isInFront;
+PlayerEntity.prototype.populatePlayerExtraFields = function() {
+    this.player.extraFields.posX = this.pos.x;
+    this.player.extraFields.posY = this.pos.y;
+    this.player.extraFields.isInFront = this.isInFront;
 }
 
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
@@ -67,18 +53,18 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.getIsOnGround = function() {
-    var tempPos = this.getPos();
+    var tempPos = this.pos.copy();
     tempPos.y += 1;
-    return this.hasCollision(tempPos, this.getIsInFront());
+    return this.hasCollision(tempPos, this.isInFront);
 }
 
 PlayerEntity.prototype.fall = function() {
-    var tempPos = this.getPos();
+    var tempPos = this.pos.copy();
     tempPos.y += 1;
-    if (this.hasCollision(tempPos, this.getIsInFront())) {
+    if (this.hasCollision(tempPos, this.isInFront)) {
         return false;
     }
-    this.setPos(tempPos);
+    this.pos.set(tempPos);
     return true;
 }
 
@@ -86,31 +72,31 @@ PlayerEntity.prototype.walk = function(offsetX) {
     if (!this.getIsOnGround()) {
         return false;
     }
-    var tempPos = this.getPos();
+    var tempPos = this.pos.copy();
     tempPos.x += offsetX;
-    if (this.hasCollision(tempPos, this.getIsInFront())) {
+    if (this.hasCollision(tempPos, this.isInFront)) {
         // Try to walk up a stair.
-        var tempPos = this.getPos();
+        tempPos.set(this.pos);
         tempPos.y -= 1;
-        if (this.hasCollision(tempPos, this.getIsInFront())) {
+        if (this.hasCollision(tempPos, this.isInFront)) {
             return false;
         }
         tempPos.x += offsetX;
-        if (this.hasCollision(tempPos, this.getIsInFront())) {
+        if (this.hasCollision(tempPos, this.isInFront)) {
             return false;
         }
-        this.setPos(tempPos);
+        this.pos.set(tempPos);
     } else {
-        this.setPos(tempPos);
+        this.pos.set(tempPos);
     }
     return true;
 }
 
 PlayerEntity.prototype.setLayer = function(isInFront) {
-    if (this.hasCollision(this.getPos(), isInFront)) {
+    if (this.hasCollision(this.pos, isInFront)) {
         return false;
     }
-    this.setIsInFront(isInFront);
+    this.isInFront = isInFront;
     return true;
 }
 

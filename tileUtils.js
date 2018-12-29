@@ -265,7 +265,7 @@ TileUtils.prototype.removeDistantChunks = function() {
         var index = 0;
         while (index < playerEntityList.length) {
             var tempPlayerEntity = playerEntityList[index];
-            var tempPos = tempPlayerEntity.getPos();
+            var tempPos = tempPlayerEntity.pos;
             var tempDistance = tempChunk.getOrthogonalDistance(tempPos);
             if (tempDistance < chunkUnloadDistance) {
                 tempShouldUnloadChunk = false;

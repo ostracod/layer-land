@@ -1,6 +1,6 @@
 
 var cameraPos = new Pos(0, 0);
-var chunkSize;
+var chunkSize = null;
 // Map from pos string representation to chunk.
 var chunkMap = {};
 var tileSize = 16;
@@ -127,8 +127,6 @@ function addVerifyPosCommand() {
 
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
-    var tempPos = createPosFromJson(command.playerEntityPos);
-    localPlayerEntity = new PlayerEntity(tempPos, command.playerEntityIsInFront);
 });
 
 addCommandListener("setChunk", function(command) {
@@ -269,6 +267,10 @@ function tileHasComponent(tile, isInFront) {
     } else {
         return tileHasBack(tile);
     }
+}
+
+function hasInitializedGame() {
+    return (localPlayerEntity !== null && chunkSize !== null);
 }
 
 function Chunk(pos, tileData) {
@@ -826,11 +828,13 @@ ClientDelegate.prototype.initialize = function() {
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    
+    var tempPos = new Pos(command.extraFields.posX, command.extraFields.posY);
+    var tempIsInFront = command.extraFields.isInFront;
+    localPlayerEntity = new PlayerEntity(tempPos, tempIsInFront);
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
-    if (localPlayerEntity === null) {
+    if (!hasInitializedGame()) {
         return;
     }
     removeDistantChunks();
@@ -878,7 +882,7 @@ function drawShapeLayer() {
 }
 
 ClientDelegate.prototype.timerEvent = function() {
-    if (localPlayerEntity === null) {
+    if (!hasInitializedGame()) {
         return;
     }
     var index = 0;

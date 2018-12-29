@@ -30,9 +30,7 @@ function addSetInitializationInfoCommand(player, commandList) {
     var tempPlayerEntity = getPlayerEntityByPlayer(player);
     commandList.push({
         commandName: "setInitializationInfo",
-        chunkSize: tileUtils.chunkSize,
-        playerEntityPos: tempPlayerEntity.getPos().toJson(),
-        playerEntityIsInFront: tempPlayerEntity.getIsInFront()
+        chunkSize: tileUtils.chunkSize
     });
 }
 
@@ -47,8 +45,8 @@ function addSetChunkCommand(chunk, commandList) {
 function addSetPosCommand(playerEntity, commandList) {
     commandList.push({
         commandName: "setPos",
-        pos: playerEntity.getPos().toJson(),
-        isInFront: playerEntity.getIsInFront()
+        pos: playerEntity.pos.toJson(),
+        isInFront: playerEntity.isInFront
     });
 }
 
@@ -134,10 +132,9 @@ gameUtils.addCommandListener(
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
         tempPlayerEntity.direction = command.direction;
-        var tempPos1 = createPosFromJson(command.pos);
-        var tempPos2 = tempPlayerEntity.getPos();
-        if (!tempPos1.equals(tempPos2)
-                || command.isInFront != tempPlayerEntity.getIsInFront()) {
+        var tempPos = createPosFromJson(command.pos);
+        if (!tempPos.equals(tempPlayerEntity.pos)
+                || command.isInFront != tempPlayerEntity.isInFront) {
             addSetPosCommand(tempPlayerEntity, commandList);
         }
     }
@@ -167,6 +164,12 @@ GameDelegate.prototype.playerLeaveEvent = function(player) {
 }
 
 GameDelegate.prototype.persistEvent = function(done) {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.populatePlayerExtraFields();
+        index += 1;
+    }
     tileUtils.persistAllChunks();
     tileUtils.removeDistantChunks();
     done();
