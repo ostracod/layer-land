@@ -62,10 +62,19 @@ gameUtils.addCommandListener(
     "getChunk",
     true,
     function(command, player, commandList) {
-        // TODO: Verify that this pos is within range.
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
         var tempPos = createPosFromJson(command.pos);
-        var tempChunk = tileUtils.getChunk(tempPos);
-        addSetChunkCommand(tempChunk, commandList);
+        var tempOffset = tileUtils.chunkSize / 2;
+        var tempChunkCenterPos = tileUtils.roundPosToChunk(tempPos);
+        tempChunkCenterPos.x += tempOffset;
+        tempChunkCenterPos.y += tempOffset;
+        var tempDistance = tempPlayerEntity.pos.getOrthogonalDistance(
+            tempChunkCenterPos
+        );
+        if (tempDistance < tileUtils.chunkSize * 3) {
+            var tempChunk = tileUtils.getChunk(tempPos);
+            addSetChunkCommand(tempChunk, commandList);
+        }
     }
 );
 
@@ -103,8 +112,9 @@ gameUtils.addCommandListener(
     "placeTile",
     true,
     function(command, player, commandList) {
-        // TODO: Implement.
-        
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        var tempPos = createPosFromJson(command.pos);
+        tempPlayerEntity.placeTile(tempPos, command.isInFront);
     }
 );
 
@@ -112,8 +122,9 @@ gameUtils.addCommandListener(
     "startMining",
     true,
     function(command, player, commandList) {
-        // TODO: Implement.
-        
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        var tempPos = createPosFromJson(command.pos);
+        tempPlayerEntity.startMining(tempPos, command.isInFront);
     }
 );
 
@@ -121,8 +132,8 @@ gameUtils.addCommandListener(
     "finishMining",
     true,
     function(command, player, commandList) {
-        // TODO: Implement.
-        
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.finishMining();
     }
 );
 

@@ -301,63 +301,6 @@ TileUtils.prototype.setTile = function(pos, tile) {
     tempChunk.setTile(pos, tile);
 }
 
-TileUtils.prototype.placeTile = function(pos, isInFront) {
-    var tempOldTile = this.getTile(pos);
-    if (tempOldTile == tileSet.DIAMOND) {
-        return false;
-    }
-    if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
-        return false;
-    }
-    var tempNewTile = null;
-    if (isInFront) {
-        if (tempOldTile == tileSet.EMPTY) {
-            tempNewTile = tileSet.FRONT;
-        } else if (tempOldTile == tileSet.BACK) {
-            tempNewTile = tileSet.FRONT_AND_BACK;
-        }
-    } else {
-        if (tempOldTile == tileSet.EMPTY) {
-            tempNewTile = tileSet.BACK;
-        } else if (tempOldTile == tileSet.FRONT) {
-            tempNewTile = tileSet.FRONT_AND_BACK;
-        }
-    }
-    if (tempNewTile === null) {
-        return false;
-    }
-    this.setTile(pos, tempNewTile);
-    return true;
-}
-
-TileUtils.prototype.removeTile = function(pos, isInFront) {
-    var tempOldTile = this.getTile(pos);
-    if (!tileUtils.tileHasComponent(tempOldTile, isInFront)) {
-        return false;
-    }
-    var tempNewTile = null;
-    if (tempOldTile == tileSet.DIAMOND) {
-        tempNewTile = tileSet.EMPTY;
-    } else if (isInFront) {
-        if (tempOldTile == tileSet.FRONT) {
-            tempNewTile = tileSet.EMPTY;
-        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
-            tempNewTile = tileSet.BACK;
-        }
-    } else {
-        if (tempOldTile == tileSet.BACK) {
-            tempNewTile = tileSet.EMPTY;
-        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
-            tempNewTile = tileSet.FRONT;
-        }
-    }
-    if (tempNewTile === null) {
-        return false;
-    }
-    this.setTile(pos, tempNewTile);
-    return true;
-}
-
 TileUtils.prototype.tileSet = tileSet;
 
 

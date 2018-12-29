@@ -36,6 +36,16 @@ Pos.prototype.equals = function(pos) {
     return (this.x == pos.x && this.y == pos.y);
 }
 
+Pos.prototype.getOrthogonalDistance = function(pos) {
+    var tempDistanceX = Math.abs(this.x - pos.x);
+    var tempDistanceY = Math.abs(this.y - pos.y);
+    if (tempDistanceX > tempDistanceY) {
+        return tempDistanceX;
+    } else {
+        return tempDistanceY;
+    }
+}
+
 Pos.prototype.toString = function() {
     return "(" + this.x + ", " + this.y + ")";
 }

@@ -512,10 +512,10 @@ PlayerEntity.prototype.placeTile = function(isInFront) {
     var tempPos = this.getTileCursorPos();
     var tempOldTile = getTile(tempPos);
     if (tempOldTile === null || tempOldTile == tileSet.DIAMOND) {
-        return;
+        return false;
     }
     if (tileHasComponent(tempOldTile, isInFront)) {
-        return;
+        return false;
     }
     var tempNewTile = null;
     if (isInFront) {
@@ -532,15 +532,15 @@ PlayerEntity.prototype.placeTile = function(isInFront) {
         }
     }
     if (tempNewTile === null) {
-        return;
+        return false;
     }
     setTile(tempPos, tempNewTile);
     addPlaceTileCommand(tempPos, isInFront);
+    return true;
 }
 
-PlayerEntity.prototype.canMine = function(isInFront) {
-    var tempPos = this.getTileCursorPos();
-    var tempOldTile = getTile(tempPos);
+PlayerEntity.prototype.canMine = function(pos, isInFront) {
+    var tempOldTile = getTile(pos);
     if (tempOldTile === null) {
         return false;
     }
@@ -548,29 +548,27 @@ PlayerEntity.prototype.canMine = function(isInFront) {
 }
 
 PlayerEntity.prototype.startMining = function(isInFront) {
-    if (this.miningPos !== null) {
-        return;
+    var tempPos = this.getTileCursorPos();
+    if (!this.canMine(tempPos, isInFront)) {
+        return false;
     }
-    if (!this.canMine(isInFront)) {
-        return;
-    }
-    this.miningPos = this.getTileCursorPos();
+    this.miningPos = tempPos;
     this.miningIsInFront = isInFront;
     this.miningDelay = 0;
     addStartMiningCommand(this.miningPos, this.miningIsInFront);
+    return true;
 }
 
 PlayerEntity.prototype.finishMining = function() {
-    addFinishMiningCommand();
+    if (this.miningPos === null) {
+        return false;
+    }
     var tempPos = this.miningPos;
     this.miningPos = null;
+    if (!this.canMine(tempPos, this.miningIsInFront)) {
+        return false;
+    }
     var tempOldTile = getTile(tempPos);
-    if (tempOldTile === null) {
-        return;
-    }
-    if (!tileHasComponent(tempOldTile, this.miningIsInFront)) {
-        return;
-    }
     var tempNewTile = null;
     if (tempOldTile == tileSet.DIAMOND) {
         tempNewTile = tileSet.EMPTY;
@@ -588,9 +586,11 @@ PlayerEntity.prototype.finishMining = function() {
         }
     }
     if (tempNewTile === null) {
-        return;
+        return false;
     }
     setTile(tempPos, tempNewTile);
+    addFinishMiningCommand();
+    return true;
 }
 
 PlayerEntity.prototype.tick = function() {
@@ -598,7 +598,7 @@ PlayerEntity.prototype.tick = function() {
         if (placeKeyIsPressed) {
             this.placeTile(tileKeyIsInFront);
         }
-        if (removeKeyIsPressed) {
+        if (removeKeyIsPressed && this.miningPos === null) {
             this.startMining(tileKeyIsInFront);
         }
         if (this.fallDelay > 0) {
@@ -618,13 +618,14 @@ PlayerEntity.prototype.tick = function() {
         }
         if (tempShouldWalk) {
             if (removeKeyIsPressed) {
-                var tempCanMine = this.canMine(tileKeyIsInFront);
+                var tempCursorPos = this.getTileCursorPos();
+                var tempCanMine = this.canMine(tempCursorPos, tileKeyIsInFront);
                 if (this.miningPos === null) {
                     if (tempCanMine) {
                         tempShouldWalk = false;
                     }
                 } else {
-                    if (!this.miningPos.equals(this.getTileCursorPos()) && tempCanMine) {
+                    if (!this.miningPos.equals(tempCursorPos) && tempCanMine) {
                         tempShouldWalk = false;
                     }
                 }

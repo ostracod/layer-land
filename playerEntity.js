@@ -11,6 +11,8 @@ function PlayerEntity(player) {
         this.player.extraFields.posY
     );
     this.isInFront = this.player.extraFields.isInFront;
+    this.miningPos = null;
+    this.miningIsInFront = null;
     playerEntityList.push(this);
     while (true) {
         if (!this.hasCollision(this.pos, this.isInFront)) {
@@ -26,6 +28,7 @@ module.exports = {
 };
 
 var tileUtils = require("./tileUtils");
+var tileSet = tileUtils.tileSet;
 
 PlayerEntity.prototype.populatePlayerExtraFields = function() {
     this.player.extraFields.posX = this.pos.x;
@@ -97,6 +100,88 @@ PlayerEntity.prototype.setLayer = function(isInFront) {
         return false;
     }
     this.isInFront = isInFront;
+    return true;
+}
+
+PlayerEntity.prototype.placeTile = function(pos, isInFront) {
+    // TODO: Enforce range and inventory restrictions.
+    var tempOldTile = tileUtils.getTile(pos);
+    if (tempOldTile == tileSet.DIAMOND) {
+        return false;
+    }
+    if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    var tempNewTile = null;
+    if (isInFront) {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.FRONT;
+        } else if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.EMPTY) {
+            tempNewTile = tileSet.BACK;
+        } else if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.FRONT_AND_BACK;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    tileUtils.setTile(pos, tempNewTile);
+    return true;
+}
+
+PlayerEntity.prototype.canMine = function(pos, isInFront) {
+    var tempOldTile = tileUtils.getTile(pos);
+    if (tempOldTile === null) {
+        return false;
+    }
+    return tileUtils.tileHasComponent(tempOldTile, isInFront);
+}
+
+PlayerEntity.prototype.startMining = function(pos, isInFront) {
+    // TODO: Enforce range and inventory restrictions.
+    if (!this.canMine(pos, isInFront)) {
+        return false;
+    }
+    this.miningPos = pos;
+    this.miningIsInFront = isInFront;
+    return true;
+}
+
+PlayerEntity.prototype.finishMining = function() {
+    // TODO: Enforce timing and inventory restrictions.
+    if (this.miningPos === null) {
+        return false;
+    }
+    var tempPos = this.miningPos;
+    this.miningPos = null;
+    if (!this.canMine(tempPos, this.miningIsInFront)) {
+        return false;
+    }
+    var tempOldTile = tileUtils.getTile(tempPos);
+    var tempNewTile = null;
+    if (tempOldTile == tileSet.DIAMOND) {
+        tempNewTile = tileSet.EMPTY;
+    } else if (this.miningIsInFront) {
+        if (tempOldTile == tileSet.FRONT) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.BACK;
+        }
+    } else {
+        if (tempOldTile == tileSet.BACK) {
+            tempNewTile = tileSet.EMPTY;
+        } else if (tempOldTile == tileSet.FRONT_AND_BACK) {
+            tempNewTile = tileSet.FRONT;
+        }
+    }
+    if (tempNewTile === null) {
+        return false;
+    }
+    tileUtils.setTile(tempPos, tempNewTile);
     return true;
 }
 
