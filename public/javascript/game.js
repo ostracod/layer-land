@@ -52,6 +52,7 @@ var walkKeyDirection = 0;
 var placeKeyIsPressed = false;
 var removeKeyIsPressed = false;
 var tileKeyIsInFront = false;
+var hasSetLocalPlayerInfo = false;
 
 colorStringSet = [];
 var index = 0;
@@ -127,6 +128,8 @@ function addVerifyPosCommand() {
 
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
+    localPlayerEntity.pos = createPosFromJson(command.playerPos);
+    localPlayerEntity.isInFront = command.playerIsInFront;
 });
 
 addCommandListener("setChunk", function(command) {
@@ -270,7 +273,7 @@ function tileHasComponent(tile, isInFront) {
 }
 
 function hasInitializedGame() {
-    return (localPlayerEntity !== null && chunkSize !== null);
+    return (hasSetLocalPlayerInfo && chunkSize !== null);
 }
 
 function displayAllStats() {
@@ -839,16 +842,15 @@ ClientDelegate.prototype.initialize = function() {
     setTileSize(64);
     document.getElementById("backInventoryTile").style.background = colorStringSet[tileSet.BACK];
     document.getElementById("frontInventoryTile").style.background = colorStringSet[tileSet.FRONT];
+    localPlayerEntity = new PlayerEntity(new Pos(0, 0), false);
     addGetInitializationInfoCommand();
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    var tempPos = new Pos(command.extraFields.posX, command.extraFields.posY);
-    var tempIsInFront = command.extraFields.isInFront;
-    localPlayerEntity = new PlayerEntity(tempPos, tempIsInFront);
     localPlayerEntity.score = command.score;
     localPlayerEntity.backTileCount = command.extraFields.backTileCount;
     localPlayerEntity.frontTileCount = command.extraFields.frontTileCount;
+    hasSetLocalPlayerInfo = true;
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {

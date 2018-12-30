@@ -30,7 +30,9 @@ function addSetInitializationInfoCommand(player, commandList) {
     var tempPlayerEntity = getPlayerEntityByPlayer(player);
     commandList.push({
         commandName: "setInitializationInfo",
-        chunkSize: tileUtils.chunkSize
+        chunkSize: tileUtils.chunkSize,
+        playerPos: tempPlayerEntity.pos.toJson(),
+        playerIsInFront: tempPlayerEntity.isInFront
     });
 }
 
