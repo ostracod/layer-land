@@ -207,11 +207,11 @@ PlayerEntity.prototype.placeTile = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.canMine = function(pos, isInFront) {
-    if (!this.getInventoryHasSpace()) {
-        return false;
-    }
     var tempOldTile = tileUtils.getTile(pos);
     if (tempOldTile === null) {
+        return false;
+    }
+    if (tempOldTile != tileSet.DIAMOND && !this.getInventoryHasSpace()) {
         return false;
     }
     return tileUtils.tileHasComponent(tempOldTile, isInFront);
