@@ -212,7 +212,9 @@ Chunk.prototype.spawnDiamond = function() {
     }
     var tempPos = tempGroupPos.copy();
     while (tempPos.y < tempGroupPos.y + tempGroupSize) {
-        tileUtils.setTile(tempPos, tileSet.DIAMOND);
+        if (!playerEntityIncludesPos(tempPos)) {
+            tileUtils.setTile(tempPos, tileSet.DIAMOND);
+        }
         tempPos.x += 1;
         if (tempPos.x >= tempGroupPos.x + tempGroupSize) {
             tempPos.x = tempGroupPos.x;
@@ -233,7 +235,9 @@ var tileUtils = new TileUtils();
 
 module.exports = tileUtils;
 
-var playerEntityList = require("./playerEntity").playerEntityList;
+var tempResource = require("./playerEntity");
+var playerEntityIncludesPos = tempResource.playerEntityIncludesPos;
+var playerEntityList = tempResource.playerEntityList;
 
 TileUtils.prototype.roundPosToChunk = function(pos) {
     return new Pos(

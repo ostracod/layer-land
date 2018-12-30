@@ -373,6 +373,9 @@ Chunk.prototype.getDrawBounds = function() {
 }
 
 function drawPixel(posX, posY, color) {
+    if (posX < 0 || posX >= canvasTileWidth || posY < 0 || posY >= canvasTileHeight) {
+        return;
+    }
     var index = (posX + posY * canvasTileWidth) * 4;
     imageDataList[index] = color.r;
     imageDataList[index + 1] = color.g;
@@ -512,7 +515,7 @@ PlayerEntity.prototype.getInventoryHasSpace = function() {
 }
 
 PlayerEntity.prototype.includesPos = function(pos, isInFront) {
-    if (this.isInFront != isInFront) {
+    if (isInFront !== "undefined" && this.isInFront != isInFront) {
         return false;
     }
     return (
@@ -523,6 +526,7 @@ PlayerEntity.prototype.includesPos = function(pos, isInFront) {
     );
 }
 
+// isInFront or playerToExclude may be undefined.
 function playerEntityIncludesPos(pos, isInFront, playerToExclude) {
     var index = 0;
     while (index < playerEntityList.length) {
@@ -665,6 +669,9 @@ PlayerEntity.prototype.placeTile = function(isInFront) {
         return false;
     }
     if (tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    if (playerEntityIncludesPos(tempPos, isInFront)) {
         return false;
     }
     var tempNewTile = null;

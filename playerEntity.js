@@ -24,9 +24,26 @@ function PlayerEntity(player) {
     }
 }
 
+// isInFront or playerToExclude may be undefined.
+function playerEntityIncludesPos(pos, isInFront, playerToExclude) {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        if (typeof playerToExclude === "undefined"
+                || tempPlayerEntity !== playerToExclude) {
+            if (tempPlayerEntity.includesPos(pos, isInFront)) {
+                return true;
+            }
+        }
+        index += 1;
+    }
+    return false;
+}
+
 module.exports = {
     PlayerEntity: PlayerEntity,
-    playerEntityList: playerEntityList
+    playerEntityList: playerEntityList,
+    playerEntityIncludesPos: playerEntityIncludesPos
 };
 
 var tileUtils = require("./tileUtils");
@@ -95,7 +112,7 @@ PlayerEntity.prototype.addTileCount = function(isInFront, amount) {
 }
 
 PlayerEntity.prototype.includesPos = function(pos, isInFront) {
-    if (this.isInFront != isInFront) {
+    if (isInFront !== "undefined" && this.isInFront != isInFront) {
         return false;
     }
     return (
@@ -104,21 +121,6 @@ PlayerEntity.prototype.includesPos = function(pos, isInFront) {
         && pos.y >= this.pos.y
         && pos.y < this.pos.y + playerEntitySize
     );
-}
-
-function playerEntityIncludesPos(pos, isInFront, playerToExclude) {
-    var index = 0;
-    while (index < playerEntityList.length) {
-        var tempPlayerEntity = playerEntityList[index];
-        if (typeof playerToExclude === "undefined"
-                || tempPlayerEntity !== playerToExclude) {
-            if (tempPlayerEntity.includesPos(pos, isInFront)) {
-                return true;
-            }
-        }
-        index += 1;
-    }
-    return false;
 }
 
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
@@ -218,6 +220,9 @@ PlayerEntity.prototype.placeTile = function(pos, isInFront) {
         return false;
     }
     if (tileUtils.tileHasComponent(tempOldTile, isInFront)) {
+        return false;
+    }
+    if (playerEntityIncludesPos(pos, isInFront)) {
         return false;
     }
     var tempNewTile = null;
