@@ -40,6 +40,26 @@ PlayerEntity.prototype.getScore = function() {
     return this.player.score;
 }
 
+PlayerEntity.prototype.setScore = function(score) {
+    this.player.score = score;
+}
+
+PlayerEntity.prototype.getBackTileCount = function() {
+    return this.player.extraFields.backTileCount;
+}
+
+PlayerEntity.prototype.setBackTileCount = function(count) {
+    this.player.extraFields.backTileCount = count;
+}
+
+PlayerEntity.prototype.getFrontTileCount = function() {
+    return this.player.extraFields.frontTileCount;
+}
+
+PlayerEntity.prototype.setFrontTileCount = function(count) {
+    this.player.extraFields.frontTileCount = count;
+}
+
 PlayerEntity.prototype.getInventorySizeWithoutRounding = function() {
     return Math.pow(this.getScore(), 1 / 2.5) + 15;
 }
@@ -50,6 +70,22 @@ PlayerEntity.prototype.getInventorySize = function() {
 
 PlayerEntity.prototype.getMiningSpeed = function() {
     return 183 / (Math.pow(this.getInventorySizeWithoutRounding(), 1.3) + 100);
+}
+
+PlayerEntity.prototype.getInventoryOccupiedSize = function() {
+    return this.getBackTileCount() + this.getFrontTileCount();
+}
+
+PlayerEntity.prototype.getInventoryHasSpace = function() {
+    return this.getInventoryOccupiedSize() < this.getInventorySize();
+}
+
+PlayerEntity.prototype.addTileCount = function(isInFront, amount) {
+    if (isInFront) {
+        this.setFrontTileCount(this.getFrontTileCount() + amount);
+    } else {
+        this.setBackTileCount(this.getBackTileCount() + amount);
+    }
 }
 
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
@@ -129,7 +165,15 @@ PlayerEntity.prototype.posIsInCursorRange = function(pos) {
 }
 
 PlayerEntity.prototype.placeTile = function(pos, isInFront) {
-    // TODO: Enforce inventory restrictions.
+    if (isInFront) {
+        if (this.getFrontTileCount() <= 0) {
+            return false;
+        }
+    } else {
+        if (this.getBackTileCount() <= 0) {
+            return false;
+        }
+    }
     if (!this.posIsInCursorRange(pos)) {
         return false;
     }
@@ -158,10 +202,14 @@ PlayerEntity.prototype.placeTile = function(pos, isInFront) {
         return false;
     }
     tileUtils.setTile(pos, tempNewTile);
+    this.addTileCount(isInFront, -1);
     return true;
 }
 
 PlayerEntity.prototype.canMine = function(pos, isInFront) {
+    if (!this.getInventoryHasSpace()) {
+        return false;
+    }
     var tempOldTile = tileUtils.getTile(pos);
     if (tempOldTile === null) {
         return false;
@@ -213,6 +261,11 @@ PlayerEntity.prototype.finishMining = function() {
         return false;
     }
     tileUtils.setTile(tempPos, tempNewTile);
+    if (tempOldTile == tileSet.DIAMOND) {
+        this.setScore(this.getScore() + 1);
+    } else {
+        this.addTileCount(this.miningIsInFront, 1);
+    }
     return true;
 }
 

@@ -54,6 +54,17 @@ function addSetPosCommand(playerEntity, commandList) {
     });
 }
 
+function addSetStatsCommand(playerEntity, commandList) {
+    commandList.push({
+        commandName: "setStats",
+        score: playerEntity.getScore(),
+        backTileCount: playerEntity.getBackTileCount(),
+        frontTileCount: playerEntity.getFrontTileCount(),
+        inventorySize: playerEntity.getInventorySize(),
+        miningSpeed: playerEntity.getMiningSpeed()
+    });
+}
+
 gameUtils.addCommandListener(
     "getInitializationInfo",
     true,
@@ -119,6 +130,7 @@ gameUtils.addCommandListener(
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
         var tempPos = createPosFromJson(command.pos);
         tempPlayerEntity.placeTile(tempPos, command.isInFront);
+        addSetStatsCommand(tempPlayerEntity, commandList);
     }
 );
 
@@ -138,6 +150,7 @@ gameUtils.addCommandListener(
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
         tempPlayerEntity.finishMining();
+        addSetStatsCommand(tempPlayerEntity, commandList);
     }
 );
 

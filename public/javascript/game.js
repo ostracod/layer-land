@@ -145,6 +145,14 @@ addCommandListener("setPos", function(command) {
     localPlayerEntity.isInFront = command.isInFront;
 });
 
+addCommandListener("setStats", function(command) {
+    localPlayerEntity.setScore(command.score);
+    localPlayerEntity.setBackTileCount(command.backTileCount);
+    localPlayerEntity.setFrontTileCount(command.frontTileCount);
+    localPlayerEntity.inventorySize = command.inventorySize;
+    localPlayerEntity.miningSpeed = command.miningSpeed;
+});
+
 function roundPosToChunk(pos) {
     return new Pos(
         Math.floor(pos.x / chunkSize) * chunkSize,
@@ -279,12 +287,12 @@ function hasInitializedGame() {
 }
 
 function displayAllStats() {
-    document.getElementById("score").innerHTML = localPlayerEntity.score;
-    document.getElementById("backTileCount").innerHTML = localPlayerEntity.backTileCount;
-    document.getElementById("frontTileCount").innerHTML = localPlayerEntity.frontTileCount;
-    document.getElementById("miningSpeed").innerHTML = localPlayerEntity.miningSpeed.toPrecision(4);
-    document.getElementById("inventoryOccupied").innerHTML = localPlayerEntity.backTileCount + localPlayerEntity.frontTileCount;
-    document.getElementById("inventorySize").innerHTML = localPlayerEntity.inventorySize;
+    document.getElementById("score").innerHTML = localPlayerEntity.getScore();
+    document.getElementById("backTileCount").innerHTML = localPlayerEntity.getBackTileCount();
+    document.getElementById("frontTileCount").innerHTML = localPlayerEntity.getFrontTileCount();
+    document.getElementById("miningSpeed").innerHTML = localPlayerEntity.getMiningSpeed().toPrecision(4);
+    document.getElementById("inventoryOccupiedSize").innerHTML = localPlayerEntity.getInventoryOccupiedSize();
+    document.getElementById("inventorySize").innerHTML = localPlayerEntity.getInventorySize();
     var tempPos = localPlayerEntity.getTileCursorPos();
     tempPos.y = -tempPos.y
     document.getElementById("tileCursorPos").innerHTML = tempPos.toString();
@@ -422,6 +430,47 @@ function PlayerEntity(pos, isInFront) {
     playerEntityList.push(this);
 }
 
+// We include these accessors to mirror the server-side code.
+PlayerEntity.prototype.getScore = function() {
+    return this.score;
+}
+
+PlayerEntity.prototype.setScore = function(score) {
+    this.score = score;
+}
+
+PlayerEntity.prototype.getBackTileCount = function() {
+    return this.backTileCount;
+}
+
+PlayerEntity.prototype.setBackTileCount = function(count) {
+    this.backTileCount = count;
+}
+
+PlayerEntity.prototype.getFrontTileCount = function() {
+    return this.frontTileCount;
+}
+
+PlayerEntity.prototype.setFrontTileCount = function(count) {
+    this.frontTileCount = count;
+}
+
+PlayerEntity.prototype.getInventorySize = function() {
+    return this.inventorySize;
+}
+
+PlayerEntity.prototype.getMiningSpeed = function() {
+    return this.miningSpeed;
+}
+
+PlayerEntity.prototype.getInventoryOccupiedSize = function() {
+    return this.getBackTileCount() + this.getFrontTileCount();
+}
+
+PlayerEntity.prototype.getInventoryHasSpace = function() {
+    return this.getInventoryOccupiedSize() < this.getInventorySize();
+}
+
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     var tempPos = new Pos(0, 0);
     var tempOffset = new Pos(0, 0);
@@ -531,6 +580,15 @@ PlayerEntity.prototype.moveTileCursor = function(offset) {
 }
 
 PlayerEntity.prototype.placeTile = function(isInFront) {
+    if (isInFront) {
+        if (this.getFrontTileCount() <= 0) {
+            return false;
+        }
+    } else {
+        if (this.getBackTileCount() <= 0) {
+            return false;
+        }
+    }
     var tempPos = this.getTileCursorPos();
     var tempOldTile = getTile(tempPos);
     if (tempOldTile === null || tempOldTile == tileSet.DIAMOND) {
@@ -562,6 +620,9 @@ PlayerEntity.prototype.placeTile = function(isInFront) {
 }
 
 PlayerEntity.prototype.canMine = function(pos, isInFront) {
+    if (!this.getInventoryHasSpace()) {
+        return false;
+    }
     var tempOldTile = getTile(pos);
     if (tempOldTile === null) {
         return false;
@@ -577,7 +638,7 @@ PlayerEntity.prototype.startMining = function(isInFront) {
     this.miningPos = tempPos;
     this.miningIsInFront = isInFront;
     this.miningDelay = 0;
-    this.maximumMiningDelay = this.miningSpeed * framesPerSecond;
+    this.maximumMiningDelay = this.getMiningSpeed() * framesPerSecond;
     addStartMiningCommand(this.miningPos, this.miningIsInFront);
     return true;
 }
@@ -855,9 +916,9 @@ ClientDelegate.prototype.initialize = function() {
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    localPlayerEntity.score = command.score;
-    localPlayerEntity.backTileCount = command.extraFields.backTileCount;
-    localPlayerEntity.frontTileCount = command.extraFields.frontTileCount;
+    localPlayerEntity.setScore(command.score);
+    localPlayerEntity.setBackTileCount(command.extraFields.backTileCount);
+    localPlayerEntity.setFrontTileCount(command.extraFields.frontTileCount);
     hasSetLocalPlayerInfo = true;
 }
 
