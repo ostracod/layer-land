@@ -65,6 +65,23 @@ function addSetStatsCommand(playerEntity, commandList) {
     });
 }
 
+function addSetTilesCommand(tileChangeList, commandList) {
+    var tempDataList = [];
+    var index = 0;
+    while (index < tileChangeList.length) {
+        var tempTileChange = tileChangeList[index];
+        tempDataList.push({
+            pos: tempTileChange.pos.toJson(),
+            tile: tempTileChange.tile
+        });
+        index += 1;
+    }
+    commandList.push({
+        commandName: "setTiles",
+        tileList: tempDataList
+    });
+}
+
 gameUtils.addCommandListener(
     "getInitializationInfo",
     true,
@@ -167,6 +184,30 @@ gameUtils.addCommandListener(
         }
     }
 );
+
+gameUtils.addCommandListener(
+    "getTileChanges",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        var tempTileChangeList = tileUtils.getNewTileChanges(
+            tempPlayerEntity.lastTileChangeId
+        );
+        tempPlayerEntity.lastTileChangeId = tileUtils.lastTileChangeId;
+        if (tempTileChangeList.length > 0) {
+            addSetTilesCommand(tempTileChangeList, commandList);
+        }
+    }
+);
+
+function timerEvent() {
+    if (gameUtils.isPersistingEverything) {
+        return;
+    }
+    tileUtils.spawnDiamonds();
+}
+
+setInterval(timerEvent, 100);
 
 function GameDelegate() {
     

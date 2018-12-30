@@ -32,6 +32,16 @@ if (!fs.existsSync(clusterDirectory)) {
     fs.mkdirSync(clusterDirectory);
 }
 
+function TileChange(pos, tile) {
+    this.pos = pos;
+    this.tile = tile;
+    tileUtils.lastTileChangeId += 1;
+    this.id = tileUtils.lastTileChangeId;
+    this.timestamp = Date.now() / 1000;
+    tileUtils.tileChangeList.push(this);
+    tileUtils.removeOldTileChanges();
+}
+
 function Chunk(pos) {
     this.pos = tileUtils.roundPosToChunk(pos);
     this.clusterPos = tileUtils.roundPosToCluster(this.pos);
@@ -156,6 +166,7 @@ Chunk.prototype.setTile = function(pos, tile) {
     var tempOldTile = this.tileList[index];
     if (tile != tempOldTile) {
         this.tileList[index] = tile;
+        new TileChange(pos.copy(), tile);
         this.isDirty = true;
     }
 }
@@ -180,10 +191,39 @@ Chunk.prototype.getOrthogonalDistance = function(pos) {
     return Math.max(tempDistance1, tempDistance2);
 }
 
+Chunk.prototype.spawnDiamond = function() {
+    var tempGroupSize = 1 + Math.floor(Math.random() * 4);
+    var tempAreaRadius = 7 * tempGroupSize;
+    var tempGroupPos = new Pos(
+        this.pos.x + Math.floor(Math.random() * chunkSize),
+        this.pos.y + Math.floor(Math.random() * chunkSize),
+    );
+    var tempStartPos = tempGroupPos.copy();
+    var tempEndPos = tempGroupPos.copy();
+    tempStartPos.x -= tempAreaRadius;
+    tempStartPos.y -= tempAreaRadius;
+    tempEndPos.x += (tempGroupSize - 1) + tempAreaRadius;
+    tempEndPos.y += (tempGroupSize - 1) + tempAreaRadius;
+    if (!tileUtils.areaIsEmpty(tempStartPos, tempEndPos)) {
+        return;
+    }
+    var tempPos = tempGroupPos.copy();
+    while (tempPos.y < tempGroupPos.y + tempGroupSize) {
+        tileUtils.setTile(tempPos, tileSet.DIAMOND);
+        tempPos.x += 1;
+        if (tempPos.x >= tempGroupPos.x + tempGroupSize) {
+            tempPos.x = tempGroupPos.x;
+            tempPos.y += 1;
+        }
+    }
+}
+
 function TileUtils() {
     this.chunkSize = chunkSize;
     // Map from pos string representation to chunk.
     this.chunkMap = {};
+    this.lastTileChangeId = 0;
+    this.tileChangeList = [];
 }
 
 var tileUtils = new TileUtils();
@@ -210,9 +250,15 @@ TileUtils.prototype.convertPosToChunkKey = function(pos) {
     return Math.floor(pos.x / chunkSize) + "," + Math.floor(pos.y / chunkSize);
 }
 
-TileUtils.prototype.getChunk = function(pos) {
+TileUtils.prototype.getChunk = function(pos, shouldLoadChunk) {
+    if (typeof shouldLoadChunk === "undefined") {
+        shouldLoadChunk = true;
+    }
     var tempKey = this.convertPosToChunkKey(pos);
     if (!(tempKey in this.chunkMap)) {
+        if (!shouldLoadChunk) {
+            return null;
+        }
         this.chunkMap[tempKey] = new Chunk(pos);
     }
     return this.chunkMap[tempKey];
@@ -285,8 +331,11 @@ TileUtils.prototype.removeDistantChunks = function() {
     }
 }
 
-TileUtils.prototype.getTile = function(pos) {
-    var tempChunk = this.getChunk(pos);
+TileUtils.prototype.getTile = function(pos, shouldLoadChunk) {
+    if (typeof shouldLoadChunk === "undefined") {
+        shouldLoadChunk = true;
+    }
+    var tempChunk = this.getChunk(pos, shouldLoadChunk);
     if (tempChunk === null) {
         return null;
     }
@@ -299,6 +348,55 @@ TileUtils.prototype.setTile = function(pos, tile) {
         return;
     }
     tempChunk.setTile(pos, tile);
+}
+
+// startPos and endPos are inclusive.
+TileUtils.prototype.areaIsEmpty = function(startPos, endPos) {
+    var tempPos = startPos.copy();
+    while (tempPos.y <= endPos.y) {
+        var tempTile = this.getTile(tempPos, false);
+        if (tempTile !== tileSet.EMPTY) {
+            return false;
+        }
+        tempPos.x += 1;
+        if (tempPos.x > endPos.x) {
+            tempPos.x = startPos.x
+            tempPos.y += 1;
+        }
+    }
+    return true;
+}
+
+TileUtils.prototype.spawnDiamonds = function() {
+    var key;
+    for (key in this.chunkMap) {
+        var tempChunk = this.chunkMap[key];
+        tempChunk.spawnDiamond();
+    }
+}
+
+TileUtils.prototype.removeOldTileChanges = function() {
+    var tempTimestamp = Date.now() / 1000 - 30;
+    while (this.tileChangeList.length > 0) {
+        var tempTileChange = this.tileChangeList[0];
+        if (tempTileChange.timestamp > tempTimestamp) {
+            break;
+        }
+        this.tileChangeList.shift();
+    }
+}
+
+TileUtils.prototype.getNewTileChanges = function(lastId) {
+    var output = [];
+    var index = 0;
+    while (index < this.tileChangeList.length) {
+        var tempTileChange = this.tileChangeList[index];
+        if (tempTileChange.id > lastId) {
+            output.push(tempTileChange);
+        }
+        index += 1;
+    }
+    return output;
 }
 
 TileUtils.prototype.tileSet = tileSet;

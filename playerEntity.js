@@ -13,6 +13,7 @@ function PlayerEntity(player) {
     this.isInFront = this.player.extraFields.isInFront;
     this.miningPos = null;
     this.miningIsInFront = null;
+    this.lastTileChangeId = tileUtils.lastTileChangeId;
     playerEntityList.push(this);
     while (true) {
         if (!this.hasCollision(this.pos, this.isInFront)) {

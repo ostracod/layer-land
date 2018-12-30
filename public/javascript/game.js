@@ -126,6 +126,12 @@ function addVerifyPosCommand() {
     });
 }
 
+function addGetTileChangesCommand() {
+    gameUpdateCommandList.push({
+        commandName: "getTileChanges"
+    });
+}
+
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
     localPlayerEntity.pos = createPosFromJson(command.playerPos);
@@ -151,6 +157,16 @@ addCommandListener("setStats", function(command) {
     localPlayerEntity.setFrontTileCount(command.frontTileCount);
     localPlayerEntity.inventorySize = command.inventorySize;
     localPlayerEntity.miningSpeed = command.miningSpeed;
+});
+
+addCommandListener("setTiles", function(command) {
+    var index = 0;
+    while (index < command.tileList.length) {
+        var tempItem = command.tileList[index];
+        var tempPos = createPosFromJson(tempItem.pos);
+        setTile(tempPos, tempItem.tile);
+        index += 1;
+    }
 });
 
 function roundPosToChunk(pos) {
@@ -929,6 +945,7 @@ ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
     removeDistantChunks();
     addGetChunkCommands();
     addVerifyPosCommand();
+    addGetTileChangesCommand();
 }
 
 function drawPixelLayer() {
