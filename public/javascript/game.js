@@ -182,6 +182,7 @@ addCommandListener("setRemotePlayerEntities", function(command) {
         var tempItem = command.playerEntityList[index];
         var tempPos = createPosFromJson(tempItem.pos);
         var tempPlayerEntity = new PlayerEntity(tempPos, tempItem.isInFront);
+        tempPlayerEntity.username = tempItem.username;
         tempPlayerEntity.direction = tempItem.direction;
         index += 1;
     }
@@ -445,6 +446,7 @@ Chunk.prototype.getOrthogonalDistance = function(pos) {
 }
 
 function PlayerEntity(pos, isInFront) {
+    this.username = null;
     this.pos = pos;
     this.isInFront = isInFront;
     this.direction = 1;
@@ -465,6 +467,10 @@ function PlayerEntity(pos, isInFront) {
 }
 
 // We include these accessors to mirror the server-side code.
+PlayerEntity.prototype.getUsername = function() {
+    return this.username;
+}
+
 PlayerEntity.prototype.getScore = function() {
     return this.score;
 }
@@ -901,6 +907,22 @@ PlayerEntity.prototype.drawMiningProgressShapeLayer = function() {
     context.fill();
 }
 
+PlayerEntity.prototype.drawNameLabel = function() {
+    if (tileSize <= 30) {
+        return;
+    }
+    var tempPos = this.pos.copy();
+    tempPos.subtract(cameraPos);
+    tempPos.scale(tileSize);
+    tempPos.x += tileSize;
+    tempPos.y -= tileSize * 3 / 8;
+    context.font = "bold 30px Arial";
+    context.textAlign = "center";
+    context.textBaseline = "bottom";
+    context.fillStyle = colorStringSet[6];
+    context.fillText(this.getUsername(), Math.floor(tempPos.x), Math.floor(tempPos.y));
+}
+
 PlayerEntity.prototype.drawPixelLayer = function() {
     this.drawAllQuarters(false);
     if (this == localPlayerEntity) {
@@ -954,6 +976,7 @@ ClientDelegate.prototype.initialize = function() {
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
+    localPlayerEntity.username = command.username;
     localPlayerEntity.setScore(command.score);
     localPlayerEntity.setBackTileCount(command.extraFields.backTileCount);
     localPlayerEntity.setFrontTileCount(command.extraFields.frontTileCount);
@@ -1010,6 +1033,15 @@ function drawShapeLayer() {
     }
 }
 
+function drawPlayerEntityNameLabels() {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.drawNameLabel();
+        index += 1;
+    }
+}
+
 ClientDelegate.prototype.timerEvent = function() {
     if (!hasInitializedGame()) {
         return;
@@ -1024,6 +1056,7 @@ ClientDelegate.prototype.timerEvent = function() {
     cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
     drawPixelLayer();
     drawShapeLayer();
+    drawPlayerEntityNameLabels();
     displayAllStats();
 }
 
