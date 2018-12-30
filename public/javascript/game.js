@@ -273,6 +273,15 @@ function hasInitializedGame() {
     return (localPlayerEntity !== null && chunkSize !== null);
 }
 
+function displayAllStats() {
+    document.getElementById("score").innerHTML = localPlayerEntity.score;
+    document.getElementById("backTileCount").innerHTML = localPlayerEntity.backTileCount;
+    document.getElementById("frontTileCount").innerHTML = localPlayerEntity.frontTileCount;
+    var tempPos = localPlayerEntity.getTileCursorPos();
+    tempPos.y = -tempPos.y
+    document.getElementById("tileCursorPos").innerHTML = tempPos.toString();
+}
+
 function Chunk(pos, tileData) {
     this.pos = roundPosToChunk(pos);
     this.tileList = [];
@@ -397,6 +406,9 @@ function PlayerEntity(pos, isInFront) {
     this.maximumMiningDelay = 40;
     this.walkDelay = 0;
     this.walkRepeatDelay = 0;
+    this.score = 0;
+    this.backTileCount = 0;
+    this.frontTileCount = 0;
     playerEntityList.push(this);
 }
 
@@ -825,6 +837,8 @@ function ClientDelegate() {
 ClientDelegate.prototype.initialize = function() {
     context.imageSmoothingEnabled = false;
     setTileSize(64);
+    document.getElementById("backInventoryTile").style.background = colorStringSet[tileSet.BACK];
+    document.getElementById("frontInventoryTile").style.background = colorStringSet[tileSet.FRONT];
     addGetInitializationInfoCommand();
 }
 
@@ -832,6 +846,9 @@ ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
     var tempPos = new Pos(command.extraFields.posX, command.extraFields.posY);
     var tempIsInFront = command.extraFields.isInFront;
     localPlayerEntity = new PlayerEntity(tempPos, tempIsInFront);
+    localPlayerEntity.score = command.score;
+    localPlayerEntity.backTileCount = command.extraFields.backTileCount;
+    localPlayerEntity.frontTileCount = command.extraFields.frontTileCount;
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
@@ -896,6 +913,7 @@ ClientDelegate.prototype.timerEvent = function() {
     cameraPos.y = localPlayerEntity.pos.y - Math.floor(canvasTileHeight / 2) + 1;
     drawPixelLayer();
     drawShapeLayer();
+    displayAllStats();
 }
 
 ClientDelegate.prototype.keyDownEvent = function(keyCode) {
