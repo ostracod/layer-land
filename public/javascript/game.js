@@ -95,11 +95,27 @@ function addSetLayerCommand(isInFront) {
     });
 }
 
-function addPlaceTileCommand(pos, isInFront) {
+function getLocalInventoryState() {
+    return {
+        score: localPlayerEntity.getScore(),
+        backTileCount: localPlayerEntity.getBackTileCount(),
+        frontTileCount: localPlayerEntity.getFrontTileCount()
+    };
+}
+
+function revertLocalInventoryState(inventoryState) {
+    localPlayerEntity.setScore(inventoryState.score),
+    localPlayerEntity.setBackTileCount(inventoryState.backTileCount),
+    localPlayerEntity.setFrontTileCount(inventoryState.frontTileCount)
+}
+
+function addPlaceTileCommand(pos, isInFront, tile) {
     gameUpdateCommandList.push({
         commandName: "placeTile",
         pos: pos.toJson(),
-        isInFront: isInFront
+        isInFront: isInFront,
+        tile: tile,
+        inventoryState: getLocalInventoryState()
     });
 }
 
@@ -111,9 +127,13 @@ function addStartMiningCommand(pos, isInFront) {
     });
 }
 
-function addFinishMiningCommand() {
+function addFinishMiningCommand(pos, isInFront, tile) {
     gameUpdateCommandList.push({
-        commandName: "finishMining"
+        commandName: "finishMining",
+        pos: pos,
+        isInFront: isInFront,
+        tile: tile,
+        inventoryState: getLocalInventoryState()
     });
 }
 
@@ -186,6 +206,18 @@ addCommandListener("setRemotePlayerEntities", function(command) {
         tempPlayerEntity.direction = tempItem.direction;
         index += 1;
     }
+});
+
+addCommandRepeater("placeTile", function(command) {
+    var tempPos = createPosFromJson(command.pos);
+    setTile(tempPos, command.tile);
+    revertLocalInventoryState(command.inventoryState);
+});
+
+addCommandRepeater("finishMining", function(command) {
+    var tempPos = createPosFromJson(command.pos);
+    setTile(tempPos, command.tile);
+    revertLocalInventoryState(command.inventoryState);
 });
 
 function roundPosToChunk(pos) {
@@ -514,6 +546,14 @@ PlayerEntity.prototype.getInventoryHasSpace = function() {
     return this.getInventoryOccupiedSize() < this.getInventorySize();
 }
 
+PlayerEntity.prototype.addTileCount = function(isInFront, amount) {
+    if (isInFront) {
+        this.setFrontTileCount(this.getFrontTileCount() + amount);
+    } else {
+        this.setBackTileCount(this.getBackTileCount() + amount);
+    }
+}
+
 PlayerEntity.prototype.includesPos = function(pos, isInFront) {
     if (isInFront !== "undefined" && this.isInFront != isInFront) {
         return false;
@@ -692,7 +732,8 @@ PlayerEntity.prototype.placeTile = function(isInFront) {
         return false;
     }
     setTile(tempPos, tempNewTile);
-    addPlaceTileCommand(tempPos, isInFront);
+    this.addTileCount(isInFront, -1);
+    addPlaceTileCommand(tempPos, isInFront, tempNewTile);
     return true;
 }
 
@@ -750,7 +791,12 @@ PlayerEntity.prototype.finishMining = function() {
         return false;
     }
     setTile(tempPos, tempNewTile);
-    addFinishMiningCommand();
+    if (tempOldTile == tileSet.DIAMOND) {
+        this.setScore(this.getScore() + 1);
+    } else {
+        this.addTileCount(this.miningIsInFront, 1);
+    }
+    addFinishMiningCommand(tempPos, this.miningIsInFront, tempNewTile);
     return true;
 }
 
