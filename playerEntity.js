@@ -103,8 +103,20 @@ PlayerEntity.prototype.setLayer = function(isInFront) {
     return true;
 }
 
+PlayerEntity.prototype.posIsInCursorRange = function(pos) {
+    return (
+        pos.x >= this.pos.x - 2
+        && pos.x <= this.pos.x + 3
+        && pos.y >= this.pos.y - 2
+        && pos.y <= this.pos.y + 3
+    );
+}
+
 PlayerEntity.prototype.placeTile = function(pos, isInFront) {
-    // TODO: Enforce range and inventory restrictions.
+    // TODO: Enforce inventory restrictions.
+    if (!this.posIsInCursorRange(pos)) {
+        return false;
+    }
     var tempOldTile = tileUtils.getTile(pos);
     if (tempOldTile == tileSet.DIAMOND) {
         return false;
@@ -142,7 +154,10 @@ PlayerEntity.prototype.canMine = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.startMining = function(pos, isInFront) {
-    // TODO: Enforce range and inventory restrictions.
+    // TODO: Enforce inventory restrictions.
+    if (!this.posIsInCursorRange(pos)) {
+        return false;
+    }
     if (!this.canMine(pos, isInFront)) {
         return false;
     }
