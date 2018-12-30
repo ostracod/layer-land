@@ -36,6 +36,22 @@ PlayerEntity.prototype.populatePlayerExtraFields = function() {
     this.player.extraFields.isInFront = this.isInFront;
 }
 
+PlayerEntity.prototype.getScore = function() {
+    return this.player.score;
+}
+
+PlayerEntity.prototype.getInventorySizeWithoutRounding = function() {
+    return Math.pow(this.getScore(), 1 / 2.5) + 15;
+}
+
+PlayerEntity.prototype.getInventorySize = function() {
+    return Math.floor(this.getInventorySizeWithoutRounding());
+}
+
+PlayerEntity.prototype.getMiningSpeed = function() {
+    return 183 / (Math.pow(this.getInventorySizeWithoutRounding(), 1.3) + 100);
+}
+
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     var tempPos = new Pos(0, 0);
     var tempOffset = new Pos(0, 0);

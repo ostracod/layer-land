@@ -32,7 +32,9 @@ function addSetInitializationInfoCommand(player, commandList) {
         commandName: "setInitializationInfo",
         chunkSize: tileUtils.chunkSize,
         playerPos: tempPlayerEntity.pos.toJson(),
-        playerIsInFront: tempPlayerEntity.isInFront
+        playerIsInFront: tempPlayerEntity.isInFront,
+        inventorySize: tempPlayerEntity.getInventorySize(),
+        miningSpeed: tempPlayerEntity.getMiningSpeed()
     });
 }
 
