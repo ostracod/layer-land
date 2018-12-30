@@ -132,6 +132,12 @@ function addGetTileChangesCommand() {
     });
 }
 
+function addGetRemotePlayerEntitiesCommand() {
+    gameUpdateCommandList.push({
+        commandName: "getRemotePlayerEntities"
+    });
+}
+
 addCommandListener("setInitializationInfo", function(command) {
     chunkSize = command.chunkSize;
     localPlayerEntity.pos = createPosFromJson(command.playerPos);
@@ -165,6 +171,18 @@ addCommandListener("setTiles", function(command) {
         var tempItem = command.tileList[index];
         var tempPos = createPosFromJson(tempItem.pos);
         setTile(tempPos, tempItem.tile);
+        index += 1;
+    }
+});
+
+addCommandListener("setRemotePlayerEntities", function(command) {
+    playerEntityList = [localPlayerEntity];
+    var index = 0;
+    while (index < command.playerEntityList.length) {
+        var tempItem = command.playerEntityList[index];
+        var tempPos = createPosFromJson(tempItem.pos);
+        var tempPlayerEntity = new PlayerEntity(tempPos, tempItem.isInFront);
+        tempPlayerEntity.direction = tempItem.direction;
         index += 1;
     }
 });
@@ -885,7 +903,9 @@ PlayerEntity.prototype.drawMiningProgressShapeLayer = function() {
 
 PlayerEntity.prototype.drawPixelLayer = function() {
     this.drawAllQuarters(false);
-    this.drawTileCursor(false);
+    if (this == localPlayerEntity) {
+        this.drawTileCursor(false);
+    }
 }
 
 PlayerEntity.prototype.drawShapeLayer = function() {
@@ -914,8 +934,10 @@ PlayerEntity.prototype.drawShapeLayer = function() {
             tileSize * 3 / 8
         );
     }
-    this.drawMiningProgressShapeLayer();
-    this.drawTileCursor(true);
+    if (this == localPlayerEntity) {
+        this.drawMiningProgressShapeLayer();
+        this.drawTileCursor(true);
+    }
 }
 
 function ClientDelegate() {
@@ -946,6 +968,7 @@ ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
     addGetChunkCommands();
     addVerifyPosCommand();
     addGetTileChangesCommand();
+    addGetRemotePlayerEntitiesCommand();
 }
 
 function drawPixelLayer() {

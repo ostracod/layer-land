@@ -82,6 +82,26 @@ function addSetTilesCommand(tileChangeList, commandList) {
     });
 }
 
+function addSetRemotePlayerEntities(remotePlayerEntityList, commandList) {
+    var tempDataList = [];
+    var index = 0;
+    while (index < remotePlayerEntityList.length) {
+        var tempPlayerEntity = remotePlayerEntityList[index];
+        tempDataList.push({
+            username: tempPlayerEntity.getUsername(),
+            score: tempPlayerEntity.getScore(),
+            pos: tempPlayerEntity.pos.toJson(),
+            isInFront: tempPlayerEntity.isInFront,
+            direction: tempPlayerEntity.direction
+        });
+        index += 1;
+    }
+    commandList.push({
+        commandName: "setRemotePlayerEntities",
+        playerEntityList: tempDataList
+    });
+}
+
 gameUtils.addCommandListener(
     "getInitializationInfo",
     true,
@@ -197,6 +217,23 @@ gameUtils.addCommandListener(
         if (tempTileChangeList.length > 0) {
             addSetTilesCommand(tempTileChangeList, commandList);
         }
+    }
+);
+
+gameUtils.addCommandListener(
+    "getRemotePlayerEntities",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntityList = [];
+        var index = 0;
+        while (index < playerEntityList.length) {
+            var tempPlayerEntity = playerEntityList[index];
+            if (tempPlayerEntity.getUsername() != player.username) {
+                tempPlayerEntityList.push(tempPlayerEntity);
+            }
+            index += 1;
+        }
+        addSetRemotePlayerEntities(tempPlayerEntityList, commandList);
     }
 );
 

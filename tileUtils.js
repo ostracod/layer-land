@@ -192,6 +192,9 @@ Chunk.prototype.getOrthogonalDistance = function(pos) {
 }
 
 Chunk.prototype.spawnDiamond = function() {
+    if (Math.random() > 0.05) {
+        return;
+    }
     var tempGroupSize = 1 + Math.floor(Math.random() * 4);
     var tempAreaRadius = 7 * tempGroupSize;
     var tempGroupPos = new Pos(

@@ -11,6 +11,7 @@ function PlayerEntity(player) {
         this.player.extraFields.posY
     );
     this.isInFront = this.player.extraFields.isInFront;
+    this.direction = 1;
     this.miningPos = null;
     this.miningIsInFront = null;
     this.lastTileChangeId = tileUtils.lastTileChangeId;
@@ -35,6 +36,10 @@ PlayerEntity.prototype.populatePlayerExtraFields = function() {
     this.player.extraFields.posX = this.pos.x;
     this.player.extraFields.posY = this.pos.y;
     this.player.extraFields.isInFront = this.isInFront;
+}
+
+PlayerEntity.prototype.getUsername = function() {
+    return this.player.username;
 }
 
 PlayerEntity.prototype.getScore = function() {
@@ -219,7 +224,6 @@ PlayerEntity.prototype.canMine = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.startMining = function(pos, isInFront) {
-    // TODO: Enforce inventory restrictions.
     if (!this.posIsInCursorRange(pos)) {
         return false;
     }
@@ -232,7 +236,7 @@ PlayerEntity.prototype.startMining = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.finishMining = function() {
-    // TODO: Enforce timing and inventory restrictions.
+    // TODO: Enforce timing restrictions.
     if (this.miningPos === null) {
         return false;
     }
