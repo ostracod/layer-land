@@ -94,6 +94,33 @@ PlayerEntity.prototype.addTileCount = function(isInFront, amount) {
     }
 }
 
+PlayerEntity.prototype.includesPos = function(pos, isInFront) {
+    if (this.isInFront != isInFront) {
+        return false;
+    }
+    return (
+        pos.x >= this.pos.x
+        && pos.x < this.pos.x + playerEntitySize
+        && pos.y >= this.pos.y
+        && pos.y < this.pos.y + playerEntitySize
+    );
+}
+
+function playerEntityIncludesPos(pos, isInFront, playerToExclude) {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        if (typeof playerToExclude === "undefined"
+                || tempPlayerEntity !== playerToExclude) {
+            if (tempPlayerEntity.includesPos(pos, isInFront)) {
+                return true;
+            }
+        }
+        index += 1;
+    }
+    return false;
+}
+
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     var tempPos = new Pos(0, 0);
     var tempOffset = new Pos(0, 0);
@@ -102,6 +129,9 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
         tempPos.add(tempOffset);
         var tempTile = tileUtils.getTile(tempPos);
         if (tileUtils.tileHasComponent(tempTile, isInFront)) {
+            return true;
+        }
+        if (playerEntityIncludesPos(tempPos, isInFront, this)) {
             return true;
         }
         tempOffset.x += 1;

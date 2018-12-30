@@ -511,6 +511,33 @@ PlayerEntity.prototype.getInventoryHasSpace = function() {
     return this.getInventoryOccupiedSize() < this.getInventorySize();
 }
 
+PlayerEntity.prototype.includesPos = function(pos, isInFront) {
+    if (this.isInFront != isInFront) {
+        return false;
+    }
+    return (
+        pos.x >= this.pos.x
+        && pos.x < this.pos.x + playerEntitySize
+        && pos.y >= this.pos.y
+        && pos.y < this.pos.y + playerEntitySize
+    );
+}
+
+function playerEntityIncludesPos(pos, isInFront, playerToExclude) {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        if (typeof playerToExclude === "undefined"
+                || tempPlayerEntity !== playerToExclude) {
+            if (tempPlayerEntity.includesPos(pos, isInFront)) {
+                return true;
+            }
+        }
+        index += 1;
+    }
+    return false;
+}
+
 PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
     var tempPos = new Pos(0, 0);
     var tempOffset = new Pos(0, 0);
@@ -519,6 +546,9 @@ PlayerEntity.prototype.hasCollision = function(pos, isInFront) {
         tempPos.add(tempOffset);
         var tempTile = getTile(tempPos);
         if (tileHasComponent(tempTile, isInFront)) {
+            return true;
+        }
+        if (playerEntityIncludesPos(tempPos, isInFront, this)) {
             return true;
         }
         tempOffset.x += 1;
@@ -546,7 +576,7 @@ PlayerEntity.prototype.fall = function() {
         return false;
     }
     this.pos.set(tempPos);
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         addFallCommand();
     }
     this.fallDelay = 2;
@@ -578,7 +608,7 @@ PlayerEntity.prototype.walk = function(offsetX) {
     } else {
         this.pos.set(tempPos);
     }
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         addWalkCommand(offsetX);
     }
     this.walkDelay = 3;
@@ -591,7 +621,7 @@ PlayerEntity.prototype.changeLayer = function() {
         return false;
     }
     this.isInFront = tempNextIsInFront;
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         addSetLayerCommand(tempNextIsInFront);
     }
     return true;
@@ -718,7 +748,7 @@ PlayerEntity.prototype.finishMining = function() {
 }
 
 PlayerEntity.prototype.tick = function() {
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         if (placeKeyIsPressed) {
             this.placeTile(tileKeyIsInFront);
         }
@@ -777,6 +807,8 @@ PlayerEntity.prototype.drawQuarter = function(isShapeLayer, offsetX, offsetY, fl
     var tempColorIndex;
     if (tempTile == tileSet.FRONT_AND_BACK) {
         tempColorIndex = 6;
+    } else if (playerEntityIncludesPos(tempTilePos, !this.isInFront, this)) {
+        tempColorIndex = tileSet.FRONT_AND_BACK;
     } else if (this.isInFront) {
         if (tempTile == tileSet.BACK) {
             tempColorIndex = tileSet.FRONT_AND_BACK;
@@ -925,7 +957,7 @@ PlayerEntity.prototype.drawNameLabel = function() {
 
 PlayerEntity.prototype.drawPixelLayer = function() {
     this.drawAllQuarters(false);
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         this.drawTileCursor(false);
     }
 }
@@ -956,7 +988,7 @@ PlayerEntity.prototype.drawShapeLayer = function() {
             tileSize * 3 / 8
         );
     }
-    if (this == localPlayerEntity) {
+    if (this === localPlayerEntity) {
         this.drawMiningProgressShapeLayer();
         this.drawTileCursor(true);
     }
