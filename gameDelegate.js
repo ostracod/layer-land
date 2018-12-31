@@ -266,6 +266,8 @@ GameDelegate.prototype.playerEnterEvent = function(player) {
 
 GameDelegate.prototype.playerLeaveEvent = function(player) {
     var index = findPlayerEntityByPlayer(player);
+    var tempPlayerEntity = playerEntityList[index];
+    tempPlayerEntity.populatePlayerExtraFields();
     playerEntityList.splice(index, 1);
 }
 
