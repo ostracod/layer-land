@@ -242,6 +242,12 @@ function timerEvent() {
         return;
     }
     tileUtils.spawnDiamonds();
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.tick();
+        index += 1;
+    }
 }
 
 setInterval(timerEvent, 100);

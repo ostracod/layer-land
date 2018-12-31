@@ -4,6 +4,26 @@ var Pos = require("./pos").Pos;
 var playerEntitySize = 2;
 var playerEntityList = [];
 
+function TimeBudget(maximumTime) {
+    this.maximumTime = maximumTime;
+    this.time = this.maximumTime;
+}
+
+TimeBudget.prototype.addTime = function(amount) {
+    this.time += amount;
+    if (this.time > this.maximumTime) {
+        this.time = this.maximumTime;
+    }
+}
+
+TimeBudget.prototype.spendTime = function(amount) {
+    if (this.time <= 0) {
+        return false
+    }
+    this.time -= amount;
+    return true;
+}
+
 function PlayerEntity(player) {
     this.player = player;
     this.pos = new Pos(
@@ -15,6 +35,9 @@ function PlayerEntity(player) {
     this.miningPos = null;
     this.miningIsInFront = null;
     this.lastTileChangeId = tileUtils.lastTileChangeId;
+    this.walkTimeBudget = new TimeBudget(6);
+    this.mineTimeBudget = new TimeBudget(6);
+    this.lastTickTime = Date.now() / 1000;
     playerEntityList.push(this);
     while (true) {
         if (!this.hasCollision(this.pos, this.isInFront)) {
@@ -178,10 +201,12 @@ PlayerEntity.prototype.walk = function(offsetX) {
         if (this.hasCollision(tempPos, this.isInFront)) {
             return false;
         }
-        this.pos.set(tempPos);
-    } else {
-        this.pos.set(tempPos);
     }
+    var tempResult = this.walkTimeBudget.spendTime(0.09);
+    if (!tempResult) {
+        return false;
+    }
+    this.pos.set(tempPos);
     return true;
 }
 
@@ -271,7 +296,6 @@ PlayerEntity.prototype.startMining = function(pos, isInFront) {
 }
 
 PlayerEntity.prototype.finishMining = function() {
-    // TODO: Enforce timing restrictions.
     if (this.miningPos === null) {
         return false;
     }
@@ -300,6 +324,11 @@ PlayerEntity.prototype.finishMining = function() {
     if (tempNewTile === null) {
         return false;
     }
+    var tempTime = this.getMiningSpeed() * 0.9;
+    var tempResult = this.mineTimeBudget.spendTime(tempTime);
+    if (!tempResult) {
+        return false;
+    }
     tileUtils.setTile(tempPos, tempNewTile);
     if (tempOldTile == tileSet.DIAMOND) {
         this.setScore(this.getScore() + 1);
@@ -307,6 +336,14 @@ PlayerEntity.prototype.finishMining = function() {
         this.addTileCount(this.miningIsInFront, 1);
     }
     return true;
+}
+
+PlayerEntity.prototype.tick = function() {
+    var tempTime = Date.now() / 1000;
+    var tempTimeOffset = tempTime - this.lastTickTime;
+    this.walkTimeBudget.addTime(tempTimeOffset);
+    this.mineTimeBudget.addTime(tempTimeOffset);
+    this.lastTickTime = tempTime;
 }
 
 
